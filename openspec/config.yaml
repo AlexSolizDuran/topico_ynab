@@ -1,0 +1,38 @@
+schema: spec-driven
+
+# Contexto del proyecto (opcional)
+# Esto se le muestra a la IA al crear artefactos.
+# Agrega tu stack tecnologico, convenciones, guias de estilo, conocimiento del dominio, etc.
+context: |
+  Pendiente de definir: el stack tecnologico aun no esta decidido.
+  Los specs son neutrales de stack a proposito: no mencionan languages,
+  frameworks, base de datos ni nombres de archivo, para que el mismo spec
+  sobreviva a un cambio de stack sin reescrituras.
+  Dominio: finanzas personales con sobres de presupuesto (YNAB-style envelope budgeting).
+  Los sobres se crean por el usuario y son de su propiedad exclusiva.
+  Los specs estan escritos en espanol. Los marcadores estructurales
+  (## Purpose, ## Requirements, ### Requirement:, #### Scenario:) y las palabras
+  clave de convencion (SHALL, WHEN, THEN) se mantienen en ingles porque los
+  parsea el flujo de sync de OpenSpec.
+
+# Reglas por artefacto (opcional)
+# Agrega reglas personalizadas para artefactos especificos.
+# Ejemplo:
+#   rules:
+#     proposal:
+#       - Mantener las propuestas por debajo de 500 palabras
+#       - Incluir siempre una seccion de "fuera de alcance"
+#     tasks:
+#       - Dividir las tareas en bloques de maximo 2 horas
+
+# Orientacion por operacion (opcional)
+# Agrega guias sobre como debe conducted la aplicacion y el archivado.
+# Esto es separado de las reglas por artefacto de arriba.
+# Ejemplo:
+#   operations:
+#     apply:
+#       guidance:
+#         - Mantener los resumenes de pruebas concisos
+#     archive:
+#       guidance:
+#         - Resumir el resultado del archivado antes de terminar
