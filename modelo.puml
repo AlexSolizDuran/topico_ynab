@@ -1,0 +1,174 @@
+@startuml
+title Modelo de datos — finanzas personales (MVP)
+
+hide circle
+skinparam shadowing false
+skinparam linetype ortho
+skinparam roundcorner 12
+skinparam nodesep 60
+
+title Modelo de datos — finanzas personales (sobres estilo YNAB)
+
+entity "usuarios" as usuarios {
+  id : bigint <<PK>>
+  --
+  nombre          : varchar(80)
+  apellido        : varchar(80)
+  nombre_usuario  : varchar(50) <<UNIQUE>>
+  correo          : varchar(120) <<UNIQUE>>
+  hash_contrasena : varchar(255)
+  activo          : boolean
+  creado_en       : timestamp
+}
+
+entity "cuentas" as cuentas {
+  id : bigint <<PK>>
+  --
+  usuario_id     : bigint <<FK>>
+  nombre         : varchar(60)
+  tipo           : enum(corriente, ahorro, efectivo, credito)
+  saldo_inicial  : numeric(14,2)
+  archivada      : boolean
+  orden          : int
+  creado_en      : timestamp
+}
+
+entity "sobres" as sobres {
+  id : bigint <<PK>>
+  --
+  usuario_id   : bigint <<FK>>
+  nombre       : varchar(60)
+  archivado    : boolean
+  orden        : int
+  creado_en    : timestamp
+}
+
+entity "asignaciones" as asignaciones {
+  id : bigint <<PK>>
+  --
+  sobre_id   : bigint <<FK>>
+  mes        : char(7)  "YYYY-MM"
+  monto      : numeric(14,2)  "siempre positivo"
+  creado_en  : timestamp
+}
+
+entity "movimientos" as movimientos {
+  id : bigint <<PK>>
+  --
+  cuenta_id : bigint <<FK>>
+  sobre_id  : bigint <<FK, nullable>>
+  monto     : numeric(14,2)  "con signo: - gasto, + ingreso"
+  fecha     : date
+  descripcion : varchar(255)
+  comercio  : varchar(120), nullable
+  tipo      : enum(gasto, ingreso, traspaso)
+  eliminado_en : timestamp, nullable
+  creado_en : timestamp
+  actualizado_en : timestamp
+}
+
+usuarios   ||--o{ cuentas      : tiene
+usuarios   ||--o{ sobres       : crea
+usuarios   ||--o{ asignaciones : reparte
+sobres     ||--o{ asignaciones : recibe
+sobres     |o--o{ movimientos  : recibe
+cuentas    ||--o{ movimientos  : opera
+
+note right of sobres
+  **No tiene columna de saldo.**
+  El disponible SIEMPRE se calcula
+  a partir de asignaciones + movimientos.
+end note
+
+note bottom of asignaciones
+  UNIQUE (sobre_id, mes)
+  Solo positivos: aqui no hay
+  sobregiros ni negativos.
+  El sobregiro vive en movimientos.
+end note
+
+note bottom of movimientos
+  **sobre_id nullable** = movimiento
+  sin asignar (dinero en limbo).
+
+  tipo = traspaso NO toca sobres.
+  Solo mueve saldos de cuenta.
+
+  monto con signo:
+    negativo = gasto
+    positivo = ingreso o devolucion
+
+  eliminar_en permite recalcular
+  sin perder el historial.
+end note
+
+note left of cuentas
+  tipo = credito => saldo NEGATIVO
+  (deuda). Al restar del dinero
+  suelto, la deuda lo descuenta.
+end note
+
+note bottom of usuarios
+  El usuario de un movimiento se
+  deduce por:
+    movimientos -> cuenta_id -> cuentas
+  Por eso movimientos NO lleva
+  usuario_id (evita desincronización).
+end note
+
+@enduml
+
+
+@startuml
+title Derivados — se calculan, nunca se guardan
+
+hide circle
+skinparam shadowing false
+skinparam nodesep 50
+
+rectangle "cuentas" as c
+rectangle "sobres + asignaciones" as s
+rectangle "movimientos" as m
+
+rectangle "saldo de cuenta" as r1
+rectangle "disponible de sobre" as r2
+rectangle "dinero suelto" as r3
+rectangle "patrimonio neto" as r4
+
+c --> r1 : saldo_inicial + SUM(monto)
+m --> r1 : incluye tipo = traspaso
+s --> r2 : SUM(asignaciones <= M)
+m --> r2 : excluye tipo = traspaso
+r1 --> r3 : SUM(saldos)
+r2 --> r3 : se resta
+r3 --> r4
+r2 --> r4
+
+note bottom of r3
+  dinero_suelto = SUM(saldos) - SUM(disponibles)
+
+  Las tarjetas entran con saldo
+  negativo, por lo que restan.
+  Puede quedar NEGATIVO:
+  significa que repartiste de mas.
+end note
+
+note bottom of r4
+  **INVARIANTE**
+
+  patrimonio_neto = SUM(disponibles) + dinero_suelto
+
+  Si esto no cuadra, hay un bug.
+  Debe cumplirse en CUALQUIER momento,
+  con CUALQUIER combinacion de datos.
+end note
+
+note bottom of r2
+  disponible(sobre, mes M) =
+    SUM(asignaciones donde mes <= M)
+    + SUM(monto de movimientos
+          no eliminados, tipo != traspaso,
+          con fecha <= fin de M)
+end note
+
+@enduml

@@ -1,4 +1,4 @@
-# user-auth Specification
+# autenticacion Specification
 
 ## Purpose
 Proporciona autenticación segura y aislada por usuario para la app de finanzas personales: inicio de sesión, registro, cierre de sesión, cambio de contraseña, endurecimiento de sesión y aislamiento de datos por usuario en la API del panel.
