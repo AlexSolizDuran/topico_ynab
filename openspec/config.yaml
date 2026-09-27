@@ -4,16 +4,79 @@ schema: spec-driven
 # Esto se le muestra a la IA al crear artefactos.
 # Agrega tu stack tecnologico, convenciones, guias de estilo, conocimiento del dominio, etc.
 context: |
-  Pendiente de definir: el stack tecnologico aun no esta decidido.
-  Los specs son neutrales de stack a proposito: no mencionan languages,
-  frameworks, base de datos ni nombres de archivo, para que el mismo spec
-  sobreviva a un cambio de stack sin reescrituras.
-  Dominio: finanzas personales con sobres de presupuesto (YNAB-style envelope budgeting).
-  Los sobres se crean por el usuario y son de su propiedad exclusiva.
-  Los specs estan escritos en espanol. Los marcadores estructurales
-  (## Purpose, ## Requirements, ### Requirement:, #### Scenario:) y las palabras
-  clave de convencion (SHALL, WHEN, THEN) se mantienen en ingles porque los
-  parsea el flujo de sync de OpenSpec.
+  STACK DECIDIDO (2026-09-27). Aplicacion full-stack, un solo despliegue.
+
+  Runtime y UI
+    Next.js 16 (App Router) con React 19, deployed en Vercel. TypeScript 5.
+    Server Components por defecto; Server Actions para mutaciones.
+    Tailwind CSS 4. No hay backend separado: todo vive en Next.js.
+
+  Datos
+    Postgres en Neon. Drizzle ORM como unica capa de acceso; no hay SQL a mano
+    fuera de las expresiones aritmeticas de dinero (ver abajo).
+    Driver `pg`. `DATABASE_URL` (pooled) para runtime, `DATABASE_URL_UNPOOLED`
+    para migraciones.
+    Aislamiento por capa de aplicacion, NO RLS: el repositorio centralizado
+    debe recibir `usuarioId` y `carteraId` de forma obligatoria en toda lectura
+    y escritura. Es una decision consciente, no un descuido.
+
+  MONEY: la regla mas importante del proyecto
+    Postgres `numeric(16,2)`. Drizzle lo devuelve como `string` (ya verificado en
+    el source: `PgNumericBuilder` declara `dataType: 'string'`).
+    - `type Dinero = string`. NUNCA `number`, NUNCA `parseFloat`.
+      TS rechaza el numero en la firma de la columna, no por convencion.
+    - Toda aritmetica derivada se hace en SQL (`sum`, `coalesce`), nunca en JS.
+    - Formato: `Intl.NumberFormat` recibe el string directo. No se convierte antes.
+    - Razon medida: `Number('1234567890123456.78')` produce `...56.75`.
+      Un float pierde centavos en magnitudes grandes.
+
+  Invariante del dominio
+    `patrimonio = suma(disponibles) + dinero_suelto`. El disponible de un sobre
+    se define como `asignado - (gastado +Reserved)`. Esa formula es SQL, no JS.
+
+  Autenticacion
+    A mano sobre Postgres. NO Auth.js, NO Neon Better Auth.
+    Argon2id con `@node-rs/argon2`. Sesiones persistidas en tabla `sesiones`
+    (los serverless de Vercel no conservan memoria entre invocaciones, asi que
+    el estado de sesion NO puede vivir en memoria).
+    Token protector para operaciones que cambian estado.
+    Cumple con `autenticacion` (7 requisitos).
+
+  Fuera de alcance del MVP
+    Cron de Vercel: el plan Hobby solo da una ejecucion diaria imprecisa, y
+    `recurrencias` se materializa al reabrir la app. No se programa nada.
+    Sin CSV, sin conciliacion bancaria, sin LLM, sin adjuntos, sin notificaciones.
+    Sin conversion de moneda: cada cartera tiene una moneda y el panel nunca
+    mezcla dos.
+
+  Convenciones
+    Los specs en `openspec/specs/` siguen siendo neutrales de stack a proposito:
+    no mencionan languages, frameworks, base de datos ni nombres de archivo, para
+    que el mismo spec sobreviva a un cambio de stack sin reescrituras. El stack
+    vive aqui, no en los requisitos.
+    Dominio: finanzas personales con sobres de presupuesto (YNAB-style envelope budgeting).
+    Los sobres se crean por el usuario y son de su propiedad exclusiva.
+    Los specs estan escritos en espanol. Los marcadores estructurales
+    (## Purpose, ## Requirements, ### Requirement:, #### Scenario:) y las palabras
+    clave de convencion (SHALL, WHEN, THEN) se mantienen en ingles porque los
+    parsea el flujo de sync de OpenSpec.
+
+  FLUJO DE ESTE REPO
+    `openspec/specs/` es el diseño OBJETIVO ya acordado: 12 capacidades,
+    78 requisitos, 257 escenarios. Nada de eso está implementado todavía; el
+    repositorio no tiene codigo.
+    Los changes en `openspec/changes/` IMPLEMENTAN contra esos requisitos, no
+    los vuelven a derivar. Al proponer una capacidad, leerla primero con
+    `openspec show <cap> --type spec` y citar sus requisitos por nombre.
+    Como el comportamiento ya está completo en los specs principales, cada
+    change declara `skip_specs: true` en su `.openspec.yaml`: no introduce
+    comportamiento nuevo, solo lo materializa.
+
+  Estado
+    12 capacidades, 78 requisitos, 257 escenarios, todas validadas.
+    6 decisiones de producto siguen abiertas en `PREGUNTAS.md`; ninguna bloquea
+    la construccion, pero la de traspasos entre carteras de la misma moneda si
+    cambia comportamiento y conviene resolverla antes de escribir codigo.
 
 # Reglas por artefacto (opcional)
 # Agrega reglas personalizadas para artefactos especificos.

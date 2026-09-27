@@ -1,83 +1,131 @@
 # autenticacion Specification
 
 ## Purpose
-Proporciona autenticación segura y aislada por usuario para la app de finanzas personales: inicio de sesión, registro, cierre de sesión, cambio de contraseña, endurecimiento de sesión y aislamiento de datos por usuario en la API del panel.
+Proporcionar acceso seguro a la aplicacion y garantizar que cada usuario vea unicamente sus propios datos. Cubre el registro, el inicio y cierre de sesion, el cambio de credenciales y las reglas de aislamiento entre usuarios. Esta capacidad describe comportamiento observable y no prescribe tecnologias de almacenamiento, algoritmos de hash ni mecanismos concretos de sesion.
 
 ## Requirements
 
-### Requirement: El usuario puede iniciar sesión con username y contraseña
-El sistema SHALL autenticar a los usuarios por username y contraseña verificada con bcrypt. La comparación del username SHALL ser insensible a mayúsculas y minúsculas. Tras un inicio de sesión exitoso el sistema SHALL establecer una sesión autenticada y redirigir al usuario al panel principal.
-
-#### Scenario: Inicio de sesión exitoso
-- **WHEN** un usuario registrado envía su username y la contraseña correcta
-- **THEN** el sistema crea una sesión y redirige al usuario al panel principal
-
-#### Scenario: Credenciales incorrectas
-- **WHEN** un usuario envía un username desconocido o una contraseña incorrecta
-- **THEN** el sistema muestra un error y no crea sesión
-
-#### Scenario: El username no distingue mayúsculas
-- **WHEN** un usuario inicia sesión con un username que difiere en mayúsculas y minúsculas del registrado
-- **THEN** el sistema lo autentica como la misma cuenta
-
-#### Scenario: La contraseña se almacena como bcrypt
-- **WHEN** una contraseña se almacena o se cambia
-- **THEN** el valor almacenado es un hash bcrypt verificado con `password_verify` y nunca texto plano
-
-### Requirement: La sesión está endurecida
-El sistema SHALL usar una cookie de sesión HttpOnly y SameSite=Lax, regenerar el identificador de sesión al iniciar sesión, e invalidar la sesión al cerrar sesión.
-
-#### Scenario: Sesión regenerada al iniciar sesión
-- **WHEN** un usuario inicia sesión correctamente
-- **THEN** el identificador de sesión se regenera para prevenir la fijación de sesión
-
-#### Scenario: El cierre de sesión limpia la sesión
-- **WHEN** un usuario autenticado cierra sesión
-- **THEN** la sesión se destruye y el usuario es redirigido a la página de inicio de sesión
-
-### Requirement: Los intentos fallidos de inicio de sesión están limitados
-El sistema SHALL bloquear nuevos intentos durante 60 segundos tras 5 intentos fallidos consecutivos.
-
-#### Scenario: Bloqueo tras varios intentos fallidos
-- **WHEN** ocurren 5 intentos de inicio de sesión fallidos en fila
-- **THEN** el sistema rechaza los siguientes intentos durante 60 segundos
-
-### Requirement: El registro requiere un username y un email únicos
-El sistema SHALL permitir crear una cuenta con nombre, apellido, username, email y contraseña (mínimo 6 caracteres), rechazando usernames y emails duplicados, y SHALL iniciar sesión al tener éxito.
-
-#### Scenario: Se rechaza el username duplicado
-- **WHEN** un usuario se registra con un username que ya existe, sin distinguir mayúsculas de minúsculas
-- **THEN** el sistema muestra un error y no crea la cuenta
-
-#### Scenario: Se rechaza el email duplicado
-- **WHEN** un usuario se registra con un email que ya existe
-- **THEN** el sistema muestra un error y no crea la cuenta
+### Requirement: El usuario se registra con datos unicos
+El sistema SHALL permitir crear una cuenta con nombre, apellido, nombre de usuario, correo electronico y contrasena. El sistema SHALL exigir una contrasena de al menos 6 caracteres. El sistema SHALL rechazar el registro cuando el nombre de usuario ya exista, sin distinguir mayusculas de minusculas, o cuando el correo electronico ya exista. La cuenta creada SHALL quedar activa y el usuario SHALL quedar con sesion iniciada.
 
 #### Scenario: Registro exitoso
-- **WHEN** un usuario se registra con datos válidos y únicos
-- **THEN** la cuenta se crea con una marca de activa y el usuario queda con sesión iniciada
+- **WHEN** un visitante se registra con nombre de usuario y correo electronico no registrados y una contrasena valida
+- **THEN** el sistema crea la cuenta activa y deja al usuario con sesion iniciada
 
-### Requirement: El usuario puede cambiar su contraseña
-El sistema SHALL permitir que un usuario autenticado defina una nueva contraseña (mínimo 6 caracteres) solo después de verificar la contraseña actual, y SHALL almacenar el nuevo valor como un hash bcrypt.
+#### Scenario: Se rechaza el nombre de usuario duplicado
+- **WHEN** un visitante se registra con un nombre de usuario ya existente que solo difiere en mayusculas
+- **THEN** el sistema muestra un error y no crea la cuenta
 
-#### Scenario: Contraseña actual incorrecta
-- **WHEN** un usuario envía una contraseña actual incorrecta
-- **THEN** la contraseña no se cambia y se muestra un error
+#### Scenario: Se rechaza el correo duplicado
+- **WHEN** un visitante se registra con un correo electronico ya existente
+- **THEN** el sistema muestra un error y no crea la cuenta
 
-#### Scenario: Contraseña cambiada
-- **WHEN** un usuario envía la contraseña actual correcta y una nueva contraseña que coincide
-- **THEN** el hash almacenado se actualiza y el cambio se confirma
+#### Scenario: Contrasena demasiado corta
+- **WHEN** un visitante se registra con una contrasena de menos de 6 caracteres
+- **THEN** el sistema muestra un error y no crea la cuenta
 
-### Requirement: La API requiere autenticación
-La API del panel SHALL rechazar las solicitudes sin una sesión válida con HTTP 401 y un error `login_required`.
+#### Scenario: El nombre de usuario diferencia mayusculas
+- **WHEN** dos usuarios intentan registrarse con el mismo nombre de usuario en distinta capitalizacion
+- **THEN** el sistema solo acepta el primero
 
-#### Scenario: Acceso no autenticado a la API
-- **WHEN** una solicitud llega a la API sin una sesión activa
-- **THEN** la API responde 401 e indica que se requiere inicio de sesión
+---
 
-### Requirement: Protección CSRF en formularios que cambian estado
-El sistema SHALL incluir un token CSRF por sesión en el inicio de sesión, el registro, el cierre de sesión y el cambio de contraseña, y SHALL rechazar las solicitudes POST con un token inválido.
+### Requirement: El usuario inicia sesion con nombre de usuario y contrasena
+El sistema SHALL autenticar al usuario mediante nombre de usuario y contrasena, y SHALL tratar el nombre de usuario de forma insensible a mayusculas y minusculas. El sistema SHALL establecer una sesion autenticada tras un inicio de sesion exitoso. El sistema SHALL rechazar el acceso cuando el nombre de usuario no exista o la contrasena sea incorrecta.
 
-#### Scenario: Token CSRF inválido
-- **WHEN** se envía un formulario que cambia estado con un token ausente o inválido
-- **THEN** la solicitud se rechaza con un error de seguridad
+#### Scenario: Inicio de sesion exitoso
+- **WHEN** un usuario registrado envia su nombre de usuario y la contrasena correcta
+- **THEN** el sistema establece una sesion autenticada y lo lleva al panel de su cartera
+
+#### Scenario: Credenciales incorrectas
+- **WHEN** un usuario envia un nombre de usuario desconocido o una contrasena incorrecta
+- **THEN** el sistema muestra un error de credenciales y no establece sesion
+
+#### Scenario: El nombre de usuario no distingue mayusculas
+- **WHEN** un usuario inicia sesion con un nombre de usuario que difiere en capitalizacion del registrado
+- **THEN** el sistema lo autentica como la misma cuenta
+
+---
+
+### Requirement: La sesion esta endurecida
+El sistema SHALL proteger la sesion de modo que no sea accesible desde el cliente mediante scripts, y SHALL limitar su envio en peticiones originadas en otros sitios. El sistema SHALL generar un identificador de sesion nuevo al iniciar sesion, y SHALL destruir la sesion al cerrar sesion.
+
+#### Scenario: Identificador renovado al iniciar sesion
+- **WHEN** un usuario inicia sesion correctamente
+- **THEN** el sistema genera un identificador de sesion nuevo
+
+#### Scenario: Cierre de sesion
+- **WHEN** un usuario autenticado cierra sesion
+- **THEN** el sistema destruye la sesion y lo lleva a la pantalla de inicio de sesion
+
+#### Scenario: Sesion no utilizable desde el cliente
+- **WHEN** el navegador inspecciona los datos de la sesion
+- **THEN** no encuentra el identificador de sesion expuesto a los scripts de la pagina
+
+---
+
+### Requirement: El sistema limita los intentos fallidos de inicio de sesion
+El sistema SHALL bloquear nuevos intentos de inicio de sesion durante 60 segundos tras 5 intentos fallidos consecutivos. El sistema SHALL reiniciar el conteo de intentos cuando el inicio de sesion tenga exito.
+
+#### Scenario: Bloqueo tras cinco intentos fallidos
+- **WHEN** ocurren 5 intentos de inicio de sesion fallidos consecutivos
+- **THEN** el sistema rechaza los siguientes intentos durante 60 segundos
+
+#### Scenario: Contreinicio tras un acceso exitoso
+- **WHEN** un usuario supera el limite de intentos y posteriormente inicia sesion correctamente
+- **THEN** el conteo de intentos fallidos se reinicia
+
+#### Scenario: Mensaje de bloqueo
+- **WHEN** un usuario intenta iniciar sesion durante el periodo de bloqueo
+- **THEN** el sistema informa que debe esperar antes de volver a intentar
+
+---
+
+### Requirement: El usuario cambia su contrasena
+El sistema SHALL permitir que un usuario autenticado defina una nueva contrasena de al menos 6 caracteres solo despues de verificar su contrasena actual. El sistema SHALL rechazar el cambio cuando la contrasena actual sea incorrecta o cuando la nueva no cumpla los requisitos. El usuario SHALL quedar autenticado con la nueva credencial tras un cambio exitoso.
+
+#### Scenario: Contrasena actual incorrecta
+- **WHEN** un usuario envia una contrasena actual incorrecta
+- **THEN** el sistema no cambia la contrasena y muestra un error
+
+#### Scenario: Contrasena nueva demasiado corta
+- **WHEN** un usuario envia la contrasena actual correcta y una nueva de menos de 6 caracteres
+- **THEN** el sistema rechaza el cambio y explica el requisito de longitud
+
+#### Scenario: Contrasena cambiada
+- **WHEN** un usuario envia la contrasena actual correcta y una nueva valida
+- **THEN** el sistema confirma el cambio y la contrasena anterior deja de ser valida
+
+---
+
+### Requirement: El sistema protege las operaciones que cambian estado
+El sistema SHALL asociar a cada sesion un token de proteccion contra peticiones no autorizadas, incluirlo en las operaciones que cambian estado y SHALL rechazar las solicitudes que lleguen sin ese token o con uno invalido. El sistema SHALL aplicar esta proteccion al menos al inicio de sesion, al registro, al cierre de sesion y al cambio de contrasena.
+
+#### Scenario: Token ausente o invalido
+- **WHEN** se envia una operacion que cambia estado con un token de proteccion ausente o invalido
+- **THEN** el sistema rechaza la solicitud e informa que se requiere una sesion valida
+
+#### Scenario: Operacion protegida valida
+- **WHEN** se envia una operacion que cambia estado con un token de proteccion valido
+- **THEN** el sistema la procesa con normalidad
+
+#### Scenario: Token no reutilizable entre sesiones
+- **WHEN** un usuario cierra sesion y otra persona intenta reutilizar el token anterior
+- **THEN** el sistema rechaza la solicitud
+
+---
+
+### Requirement: El usuario solo accede a sus propios datos
+El sistema SHALL negar el acceso a los datos de finanzas personales de un usuario autenticado a cualquier otro usuario. Toda cartera, grupo, cuenta, sobre, asignacion, movimiento, meta y regla recurrente SHALL pertenecer a un unico usuario. El sistema SHALL rechazar las solicitudes que no correspondan al usuario, y SHALL negar el acceso cuando la pertenencia no pueda verificarse.
+
+#### Scenario: Acceso a datos ajenos
+- **WHEN** un usuario autenticado solicita la cartera, un sobre o un movimiento que pertenece a otro usuario
+- **THEN** el sistema le niega el acceso e informa que el recurso no existe
+
+#### Scenario: Identificador inexistente
+- **WHEN** un usuario solicita un recurso con un identificador que no corresponde a nada
+- **THEN** el sistema informa que el recurso no existe sin revelar si pertenece a otro usuario
+
+#### Scenario: Sesion ausente en una operacion protegida
+- **WHEN** llega una solicitud de datos o de escritura sin una sesion valida
+- **THEN** el sistema la rechaza e indica que se requiere iniciar sesion

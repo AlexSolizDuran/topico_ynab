@@ -1,147 +1,127 @@
 # Preguntas pendientes
 
-10 decisiones abiertas. Las 6 primeras son **bloqueantes**: cambian los
-requisitos que se van a escribir, así que conviene resolverlas antes.
-
-Para las de alcance, se puede decidir más adelante sin bloquear el trabajo.
-
----
+Estas son las preguntas que siguen abiertas. Todo lo demas ya esta decidido y
+recogido en `openspec/specs/`. Cada pregunta indica donde quedo documentada la
+decision provisional, para poder revisarla si el usuario cambia de opinion.
 
 ## Bloqueantes
 
-### 1. ¿Cómo se tapa un sobre que se gastó de más?
+Ninguna. El conjunto de specs esta completo y se puede implementar.
 
-Te pasaste en un sobre y quedó en negativo. ¿Qué hace el sistema?
+## Para confirmar
 
-- **Automático** — usa dinero suelto mientras alcance; si no alcanza, deja el
-  sobre negativo y avisa. Es lo que hace YNAB.
-- **Manual** — no hace nada hasta que el usuario elija de qué sobre taparlo.
-- **Con bloque** — rechaza la operación si no alcanza dinero suelto.
+### 1. ¿Un traspaso entre carteras de distinta moneda, o entre carteras en general?
 
-Recomendación: automático con aviso. El usuario después puede mover dinero
-entre sobres a mano.
+**Decision provisional:** el sistema rechaza el traspaso cuando las cuentas
+involucradas pertenecen a carteras distintas, sin importar si comparten moneda.
 
----
+**Por que esta decision:** la decision del usuario fue "no se puede pasar de una
+cartera a otra, o al menos no pasar de una moneda a otra". El modelo fue
+construido de modo que un movimiento pertenece a una sola cartera, deducida por
+`movimientos -> cuenta_id -> cuentas -> carteras -> usuarios`, y el usuario
+rechazo anadir reglas de integridad cruzada al modelo. Bajo esa estructura, un
+traspaso entre carteras distintas no tiene a que almacenarse en ninguna parte.
 
-### 2. ¿Qué pasa al archivar un sobre que todavía tiene saldo?
+**Lo que falta confirmar:** si dos carteras de la MISMA moneda deben poder
+transferirse entre si, o si la prohibition es total.
 
-El riesgo: si el sobre desaparece de la cuenta, la invariante se rompe.
-
-- **Reasignar antes** — no deja archivar un sobre con saldo distinto de cero.
-- **Contarlo igual** — el sobre archivado sigue sumando al total, solo no se
-  muestra.
-- **Devolver al suelto** — el saldo vuelve automáticamente a dinero suelto.
-
-Lo mismo aplica a **archivar una cuenta**: si es una tarjeta con deuda, el
-patrimonio cambia.
+**Donde esta documentada:** `carteras` R4, `traspasos` R1, `transacciones` R3 y R5.
 
 ---
 
-### 3. ¿Qué pasa al borrar un sobre que tiene movimientos?
+### 2. ¿El importe minimo de un traspaso y de una asignacion
 
-Un sobre con 40 movimientos no se puede borrar sin decidir qué pasa con ellos.
+**Decision provisional:** no se fijo un minimo. `sobres` R4 exige que una
+asignacion sea positiva, pero ni las asignaciones ni los traspasos fijan una
+cota minima, y `traspasos` R1 tampoco exige que el importe sea distinto de cero.
 
-- **Solo archivar** — nunca se borra, se archiva. Los movimientos se conservan.
-- **Reasignar** — se pide otro sobre destino para los movimientos.
-- **Cascada** — se borran también los movimientos.
+**Por que esta abierta:** con un importe minimo pequeño, tipico 1 centavo, se
+pueden usar traspasos para repartir con precision decimales que no cuadran por
+redondeo. Sin minimo, se pueden crear traspasos sin efecto util.
 
-Si se permite borrar sin más, quedan movimientos apuntando a un sobre
-inexistente y las consultas se rompen.
+**Lo que falta decidir:** si existe un minimo, y de cuanto.
 
----
-
-### 4. ¿Se recalcula al registrar un movimiento pasado?
-
-Hoy registras un movimiento de **marzo** cuando estamos en junio.
-
-- ¿Se recalcula marzo? Con el modelo derivado, **sí**, y es lo correcto.
-- ¿El panel de marzo cambia a posteriori?
-
-Parece raro, pero es lo correcto. Hay que dejarlo explícito en el spec para
-que nadie lo "arregle" después.
+**Donde esta documentada:** `sobres` R4, `traspasos` R1.
 
 ---
 
-### 5. ¿A qué mes pertenece un movimiento?
+### 3. ¿Umbral por defecto para destacar variaciones en comparativos
 
-- Un movimiento pertenece al **mes calendario de su fecha**, no al mes en que
-  lo registraste.
-- **Zona horaria**: un movimiento del 31 de marzo a las 23:00, ¿es de marzo? Si
-  el servidor está en UTC y el usuario en México, puede saltarse de mes. Hay
-  que definir que la fecha la interpreta la zona horaria del usuario.
+**Decision provisional:** el umbral lo define el sistema y el usuario puede
+ajustarlo. No se fijo un valor por defecto.
 
----
+**Por que esta abierta:** un umbral fijo sin justification hace que la
+funcionalidad parezca arbitraria en la primera pantalla que ve el usuario.
 
-### 6. ¿Cómo se redondean los centavos?
+**Lo que falta decidir:** el valor por defecto, y si el umbral se expresa como
+porcentaje, como importe absoluto, o como ambos.
 
-Si repartes 1,000 entre 3 sobres: `333.33 × 3 = 999.99`. **¿Dónde va el centavo?**
-
-Y si el sistema calcula porcentajes (como el 80% de alerta), el redondeo puede
-hacer que la suma no cuadre contra la invariante.
-
-Falta fijar la regla antes de escribir cualquier spec que calcule porcentajes.
+**Donde esta documentada:** `comparativos` R2.
 
 ---
 
-## De alcance
+### 4. ¿Que muestra el panel cuando una cartera esta archivada
 
-### 7. ¿Un change o varios?
+**Decision provisional:** no se especifico. Un usuario puede archivar una
+cartera cuando todas sus cuentas y sobres estan en cero, y el sistema conserva
+sus datos e historial, pero no se definio si el panel sigue mostrando esa
+cartera, la oculta, o impide abrirla.
 
-Opción **a**: un solo change que quita lo viejo y agrega `cuentas`, `sobres`,
-`transacciones` y `traspasos`. Más rápido, un archivo de tareas.
+**Lo que falta decidir:** el comportamiento del panel y si se permite reabrir
+una cartera archivada.
 
-Opción **b**: 4 changes separados, flujo spec-driven estricto. Más ceremony,
-más control.
-
----
-
-### 8. ¿El panel ahora o al final?
-
-El panel necesita que sobres y movimientos ya existan para tener sentido. Se specs
-al final, con el modelo de datos ya firme.
-
-La alternativa es incluirlo ahora como spec de solo lectura de los derivados
-(liquidez, balances por sobre, dinero suelto). Más trabajo antes de tener algo
-funcional.
+**Donde esta documentada:** `carteras` R5, `panel` R1.
 
 ---
 
-### 9. ¿Auto-asignación en el MVP?
+### 5. ¿Se conserva el acceso a la cartera archivada
 
-Reparto automático del dinero suelto con prioridad:
+Relacionado con la anterior: la especificacion de `carteras` dice que una cartera
+archivada conserva sus datos y su historial, pero no dice si puede consultarse.
+Si se oculta por completo, "conservar el historial" solo significaria que los
+datos no se borran, no que el usuario pueda verlos.
 
-1. Tapa sobres negativos
-2. Completa metas
-3. Reparte el resto
-
-Es lo que hace cómoda la app, pero es una decisión de diseño grande. Se puede
-dejar para después sin romper el modelo.
+**Donde esta documentada:** `carteras` R5.
 
 ---
 
-### 10. ¿Conciliación bancaria en el MVP?
+### 6. ¿El enlace de recuperacion de contrasena en PROMPTS-DISENO.md
 
-El saldo real del banco contra el registrado. Sin ella, la app puede mostrar un
-saldo que no coincide con el banco.
+**Decision provisional:** la recuperacion de contrasena quedo fuera de alcance, y
+la capacidad de autenticacion no la incluye. Sin embargo, `PROMPTS-DISENO.md`
+incluye en la vista de inicio de sesion un enlace de contrasena olvidada.
 
-Alternativa más simple para el MVP: **exportar/importar CSV** y un ajuste
-manual.
+**Lo que falta decidir:** si se quita el enlace del prompt de diseno, o si se
+agrega la recuperacion de contrasena como capacidad nueva.
 
----
+**Donde esta documentada:** `PROMPTS-DISENO.md`, lote 1.
 
-## Para responder
+## Descartadas
 
-Basta con indicar el número y la letra. Ejemplos:
+Estas preguntas se respondieron durante la planificacion y ya estan reflejadas en
+las especificaciones:
 
-```
-1. automática con aviso
-2. devolver al suelto
-3. solo archivar
-4. sí, recalcula
-5. mes calendario, zona del usuario
-6. redondeo a 2 decimales, el centavo va al último
-7. un solo change
-8. al final
-9. después
-10. CSV por ahora
-```
+- ¿Como se tapa un sobre gastado de mas? -> tapa manual, solo con aviso.
+  `sobres` R7.
+- ¿Que pasa al archivar un sobre con saldo? -> solo con disponible cero; despues
+  acepta devoluciones. `sobres` R11.
+- ¿Que pasa al borrar un sobre con movimientos? -> no se borra, se archiva.
+  `sobres` R10.
+- ¿Se recalcula al registrar un movimiento pasado? -> si, siempre. `transacciones` R8.
+- ¿A que mes pertenece un movimiento? -> al mes calendario de su fecha, con la
+  zona horaria del usuario. `transacciones` R7.
+- ¿Como se redondean los centavos? -> importes exactos, redondeo solo al
+  mostrar. `carteras` R4.
+- ¿Un cambio de OpenSpec o varios? -> edicion directa en `openspec/specs/`.
+- ¿El panel ahora o al final? -> es una de las doce capacidades.
+- ¿Autoasignacion en el MVP? -> fuera de alcance. `transacciones` R2.
+- ¿Conciliacion bancaria en el MVP? -> fuera de alcance; la app no se conecta a
+  bancos.
+- ¿Copia de seguridad? -> fuera de alcance.
+- ¿Meses futuros en el presupuesto? -> fuera de alcance.
+- ¿Plantillas de sobres? -> fuera de alcance.
+- ¿Deuda compartida? -> fuera de alcance.
+- ¿Adjuntos en movimientos? -> fuera de alcance.
+- ¿Notificaciones y recordatorios? -> fuera de alcance.
+- ¿Presupuesto por porcentaje del ingreso? -> fuera de alcance.
+- ¿Clasificacion automatica con LLM? -> fuera de alcance.
