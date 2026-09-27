@@ -1,0 +1,83 @@
+@import 'tailwindcss';
+
+/*
+ * Tokens del sistema de diseno de Stitch (proyecto 8487809175016098023).
+ *
+ * De ahi sale la composicion, la jerarquia y la proporcion de los bloques. El
+ * codigo de Stitch NO se copia: es un stack distinto, sin datos reales ni
+ * mutaciones. Ver la skill `vistas-stitch`.
+ *
+ * Semantico de color, no decorativo: `positivo` es disponible, `negativo` es
+ * desborde, `archivado` es gris. Ningun estado se transmite solo con color: la
+ * especificacion lo exige y el diseno tambien lo pide.
+ */
+@theme {
+  /* Marca e interaccion */
+  --color-marca: #2563eb;
+  --color-marca-fuerte: #1d4ed8;
+  --color-marca-tenue: #eff6ff;
+
+  /* Dinero: la unica fuente de verdad visual del estado de un importe */
+  --color-positivo: #10b981;
+  --color-positivo-fuerte: #059669;
+  --color-positivo-tenue: #ecfdf5;
+  --color-negativo: #ef4444;
+  --color-negativo-fuerte: #dc2626;
+  --color-negativo-tenue: #fef2f2;
+  --color-atencion: #f59e0b;
+  --color-atencion-tenue: #fffbeb;
+
+  /* Lienzo y bordes */
+  --color-lienzo: #f8fafc;
+  --color-superficie: #ffffff;
+  --color-superficie-tenue: #f1f5f9;
+  --color-borde: #e2e8f0;
+  --color-borde-fuerte: #cbd5e1;
+
+  /* Texto */
+  --color-texto: #0f172a;
+  --color-texto-medio: #334155;
+  --color-texto-tenue: #64748b;
+  --color-texto-invertido: #ffffff;
+
+  /* Tipografia: cifras en Plus Jakarta Sans, texto en Inter */
+  --font-cifra: var(--fuente-cifra), ui-sans-serif, system-ui, sans-serif;
+  --font-texto: var(--fuente-texto), ui-sans-serif, system-ui, sans-serif;
+
+  /* Radios: el diseno usa 2xl para tarjetas y contenedores de saldo */
+  --radius-tarjeta: 1rem;
+
+  /* Sombras de tres niveles, tal como las define el design system */
+  --shadow-nivel-1: 0 1px 3px 0 rgb(15 23 42 / 4%), 0 1px 2px -1px rgb(15 23 42 / 2%);
+  --shadow-nivel-2: 0 4px 6px -1px rgb(15 23 42 / 6%), 0 2px 4px -2px rgb(15 23 42 / 4%);
+  --shadow-nivel-3: 0 20px 25px -5px rgb(15 23 42 / 8%), 0 8px 10px -6px rgb(15 23 42 / 4%);
+}
+
+@layer base {
+  html {
+    background-color: var(--color-lienzo);
+    color: var(--color-texto);
+    font-family: var(--font-texto);
+  }
+
+  /*
+   * Cifras tabulares en TODO importe. Sin esto, los numeros bailan de columna
+   * al cambiar de valor, que es exactamente lo que un presupuesto no puede
+   * permitirse. Es la unica regla global de la interfaz.
+   */
+  .cifra,
+  [data-cifra] {
+    font-family: var(--font-cifra);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+  }
+
+  /* En movon las listas se vuelven tarjetas apiladas. */
+  @media (max-width: 767px) {
+    .fila-apilable {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.25rem 1rem;
+    }
+  }
+}

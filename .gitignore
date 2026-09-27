@@ -1,0 +1,15 @@
+node_modules/
+.next/
+out/
+build/
+
+# Secretos. .env.example queda versionado como plantilla.
+.env*
+!.env.example
+
+# Migraciones generadas por drizzle-kit
+drizzle/meta/
+*.tsbuildinfo
+next-env.d.ts
+
+.DS_Store

@@ -1,0 +1,6 @@
+schema: spec-driven
+created: 2026-09-27
+# Sin deltas: el comportamiento ya esta escrito en `openspec/specs/sobres/spec.md` y
+# en los 7 escenarios de `grupos` que este change absorbe. Este change materializa, no
+# diseña. Sin este marcador `openspec validate` rechaza un change con cero deltas.
+skip_specs: true
