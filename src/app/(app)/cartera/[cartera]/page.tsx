@@ -42,7 +42,7 @@ import { FormularioNuevoTraspaso } from '@/components/traspasos'
  *
  * La pantalla es de un solo periodo y no tiene selector: los meses futuros y la
  * navegacion entre periodos quedan fuera de alcance. Se calcula en el servidor, una
- * vez, y se pasa a todos los repositorios —disponibles, resumen y avisos— para que las
+ * vez, y se pasa a todos los repositorios â€”disponibles, resumen y avisosâ€” para que las
  * cifras de la pagina hablen todas del mismo mes. Cada repositorio recalcularlo por su
  * cuenta abriria la puerta a que el disponible de una tabla sea de junio y el dinero
  * suelto de julio.
@@ -71,8 +71,8 @@ function filtroDeUrl(
     cuenta_id: primero(searchParams.cuenta_id),
     sobre_id: primero(searchParams.sobre_id),
     // El `<select>` de tipo manda `''` en su opcion vacia, y `''` **no** es un `tipo`
-    // valido: `z.enum` solo acepta las tres etiquetas. Sin esta conversion, `tipo=''` —o sea,
-    // toda URL sin filtro— haria fallar `validarFiltro` y la pagina caeria al caso de "filtro
+    // valido: `z.enum` solo acepta las tres etiquetas. Sin esta conversion, `tipo=''` â€”o sea,
+    // toda URL sin filtroâ€” haria fallar `validarFiltro` y la pagina caeria al caso de "filtro
     // mal escrito" siempre. Lo que significa "no filtrar por tipo" es la **ausencia** de la
     // clave, no una cadena vacia.
     tipo: primero(searchParams.tipo) || undefined,
@@ -306,8 +306,8 @@ export default async function PaginaCuentas({
    * Los eliminados de esta cartera, para poder restaurar.
    *
    * Sin esto, R6 seria solo la mitad de lo que dice: la fila se conserva, pero no hay de
-   * donde volver a tomarla. Sin filtros a proposito —un filtro que oculta el unico movimiento
-   * que se puede deshacer es peor que no tener filtro— y recortado por cartera igual que el
+   * donde volver a tomarla. Sin filtros a proposito â€”un filtro que oculta el unico movimiento
+   * que se puede deshacer es peor que no tener filtroâ€” y recortado por cartera igual que el
    * resto, por la misma razon.
    *
    * El `eliminado_en` viene como `Date` desde el driver, asi que el mapa lo pasa a string una
