@@ -1,7 +1,7 @@
 import { and, asc, eq, isNull, sql } from 'drizzle-orm'
 import type { SQL } from 'drizzle-orm'
 import type { Base } from '../db/tipos'
-import { grupos, sobres } from '../db/schema'
+import { grupos, metas, sobres } from '../db/schema'
 import type { Dinero } from '../dinero'
 import { operarSobreCartera } from './carteras'
 import { disponibleDeSobre as disponibleDeSobreAlias, finDePeriodo } from './fragmentos'
@@ -32,8 +32,8 @@ import { disponibleDeSobre as disponibleDeSobreAlias, finDePeriodo } from './fra
  *
  * Nota sobre el SQL crudo: los nombres de tabla en las subconsultas son texto, no
  * identificadores de Drizzle, asi que un renombre de tabla no los actualiza. Es el
- * precio de escribir la aritmetica en la base, y la alternativa —traer las filas y
- * sumarlas en JavaScript— esta expressly prohibida.
+ * precio de escribir la aritmetica en la base, y la alternativa �traer las filas y
+ * sumarlas en JavaScript� esta expressly prohibida.
  */
 
 export class SobreNoExiste extends Error {
@@ -126,7 +126,7 @@ export interface SobreVisto {
  * El corte se arma en SQL y no en JavaScript. Restar un mes en JS significa restar uno a
  * un `Number`, y con ahi es donde empiezan los `Number(anio)`: el caso de diciembre,
  * en el que el mes siguiente es enero del ano siguiente, es un `if` mas que se puede
- * olvidar, y un forgot esperando a que el primer tapón de enero lo encuentre.
+ * olvidar, y un forgot esperando a que el primer tap�n de enero lo encuentre.
  */
 function topeDePeriodo(periodo: string) {
   return sql`(${periodo} || '-01')::date + interval '1 month'`
@@ -154,7 +154,7 @@ export function disponibleDeSobreSql(sobre_id: number, periodo: string) {
  * `sql.raw` y no `${sobres.id}`, y la razon es la trampa mas silenciosa de este
  * archivo: Drizzle renderiza una columna entre `${}` **sin calificarla**, asi que
  * queda `"id"`. Adentro del subquery, `a.sobre_id = "id"` se resuelve a la columna de
- * la tabla **interna** —`asignaciones.id`— y no a la de la fila de afuera. La consulta
+ * la tabla **interna** �`asignaciones.id`� y no a la de la fila de afuera. La consulta
  * no da error: corre, y suma el disponible de **todos** los sobres.
  *
  * Por eso el `check` de la regla del dinero no alcanza para encontrarlo, y por eso hay
@@ -187,8 +187,8 @@ function pertenencia(usuario_id: number, cartera_id: number) {
  * El mismo listado, con el disponible derivado.
  *
  * `cero` y `eliminable` se calculan en la misma consulta y en SQL, con `= 0` sobre la
- * suma derivada. La alternativa —traer el disponible como string y compararlo en
- * JavaScript— es exactamente la conversion que el proyecto prohibe, y Postgres
+ * suma derivada. La alternativa �traer el disponible como string y compararlo en
+ * JavaScript� es exactamente la conversion que el proyecto prohibe, y Postgres
  * devuelve `-0.00` o `0.00` segun normalice, que es donde se cuelan los centavos.
  */
 const COLUMNAS = {
@@ -555,6 +555,15 @@ export async function archivarSobre(
     .returning({ id: sobres.id })
 
   if (!archivado) throw new SobreNoExiste()
+
+  await db
+    .update(metas)
+    .set({
+      estado: 'abandonada',
+      abandonada_en: new Date(),
+      actualizado_en: new Date(),
+    })
+    .where(and(eq(metas.sobre_id, sobre_id), eq(metas.estado, 'activa')))
 }
 
 export async function restaurarSobre(
@@ -584,7 +593,7 @@ export async function restaurarSobre(
  *
  * Las dos condiciones son distintas y las dos hacen falta. Sin movimientos, porque un
  * sobre con historial se archiva. Y con disponible cero, porque un sobre sin
- * movimientos puede tener asignaciones —y entonces tiene plata adentro que se
+ * movimientos puede tener asignaciones �y entonces tiene plata adentro que se
  * perderia sin dejar rastro.
  *
  * Las asignaciones se van con el sobre por la FK en cascada, y solo se llega aqui

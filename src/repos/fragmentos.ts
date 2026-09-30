@@ -36,7 +36,7 @@ export function finDePeriodo(periodo: string): SQL {
 /**
  * El saldo de una cuenta: lo que puso al abrirla mas lo que movio.
  *
- * Los traspasos **si** cuentan acá, y por eso es distinto del disponible de un sobre: un
+ * Los traspasos **si** cuentan ac�, y por eso es distinto del disponible de un sobre: un
  * traspaso entre dos cuentas de la misma cartera mueve saldo de una a otra, y la cartera
  * queda igual, pero cada cuenta tiene que reflejarlo.
  *
@@ -47,10 +47,11 @@ export function finDePeriodo(periodo: string): SQL {
  * las dos patas -con signo opuesto y mismo `transferencia_id`- es de `070-traspasos`; aca
  * la columna existe y la cascada de `060` la lee, pero nadie crea el grupo todavia.
  */
-export function saldoDeCuenta(alias: string): SQL<Dinero> {
+export function saldoDeCuenta(alias: string, periodo: string | null = null): SQL<Dinero> {
+  const porFecha = periodo === null ? sql`` : sql` and m.fecha < ${finDePeriodo(periodo)}`
   return sql<Dinero>`${sql.raw(alias)}.saldo_inicial + coalesce((
     select sum(m.monto) from movimientos m
-    where m.cuenta_id = ${sql.raw(alias)}.id and m.eliminado_en is null
+    where m.cuenta_id = ${sql.raw(alias)}.id and m.eliminado_en is null${porFecha}
   ), 0)`
 }
 
@@ -58,11 +59,11 @@ export function saldoDeCuenta(alias: string): SQL<Dinero> {
  * El disponible de un sobre: lo asignado hasta el periodo, menos lo gastado.
  *
  * El signo lo lleva `movimientos.monto`. Las asignaciones del usuario son siempre
- * positivas —lo garantiza el `check` de la base— y el unico negativoallowed es el de
+ * positivas �lo garantiza el `check` de la base� y el unico negativoallowed es el de
  * `reasignacion`, que escribe `moverEntreSobres` al vaciar el origen.
  *
  * Los movimientos de tipo `traspaso` quedan afuera: un traspaso entre cuentas con sobre
- * es dinero que entro a la cuenta **desde otro sobre**, y el otro sobre ya lo descontó. Si
+ * es dinero que entro a la cuenta **desde otro sobre**, y el otro sobre ya lo descont�. Si
  * se contara aqui, el disponible de los dos sobres sumaria menos de lo que hay.
  */
 export function disponibleDeSobre(

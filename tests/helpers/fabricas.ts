@@ -18,6 +18,7 @@ import {
   cuentas,
   grupos,
   gruposTransferencia,
+  metas,
   movimientos,
   reglasRecurrentes,
   sesiones,
@@ -263,7 +264,7 @@ export interface OpcionesMovimiento {
   /** Con signo: negativo gasto, positivo ingreso. String, nunca number. */
   monto: string
   tipo?: 'gasto' | 'ingreso' | 'traspaso'
-  sobre_id?: number
+  sobre_id?: number | null
   /** El grupo de traspaso, si esta fila es una pata. Lo escribe `crearTransferencia`. */
   transferencia_id?: number
   fecha?: string
@@ -318,7 +319,7 @@ export interface OpcionesGrupoTransferencia {
  * Inserta un grupo de traspaso y devuelve su id.
  *
  * En `060` no hay formulario que cree una transferencia, asi que las pruebas que necesitan
- * patas la cascada de R6, el rechazo de editar una pata arman el par aca, que es la
+ * patas ?la cascada de R6, el rechazo de editar una pata? arman el par aca, que es la
  * forma en que `070-traspasos` lo va a hacer. Ver D5.
  */
 export async function crearGrupoTransferencia(
@@ -455,5 +456,35 @@ export async function crearRegla(
     .returning({ id: reglasRecurrentes.id })
 
   if (!creada) throw new Error('crearRegla no devolvio id')
+  return creada.id
+}
+
+
+export interface OpcionesMeta {
+  monto_objetivo?: string
+  fecha_limite?: string | null
+  estado?: "activa" | "completada" | "abandonada"
+  completada_en?: Date | null
+  abandonada_en?: Date | null
+}
+
+export async function crearMeta(
+  db: Base,
+  sobre_id: number,
+  opciones: OpcionesMeta = {},
+): Promise<number> {
+  const [creada] = await db
+    .insert(metas)
+    .values({
+      sobre_id,
+      monto_objetivo: opciones.monto_objetivo ?? "1000.00",
+      fecha_limite: opciones.fecha_limite ?? null,
+      estado: opciones.estado ?? "activa",
+      completada_en: opciones.completada_en ?? null,
+      abandonada_en: opciones.abandonada_en ?? null,
+    })
+    .returning({ id: metas.id })
+
+  if (!creada) throw new Error("crearMeta no devolvio id")
   return creada.id
 }

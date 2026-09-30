@@ -11,6 +11,7 @@ import { carteras } from './tablas/carteras'
 import { cuentas, gruposTransferencia, movimientos } from './tablas/cuentas'
 import { grupos } from './tablas/grupos'
 import { reglasRecurrentes } from './tablas/recurrencias'
+import { metas, estadoMeta } from './tablas/metas'
 import { sesiones } from './tablas/sesiones'
 import { asignaciones, sobres } from './tablas/sobres'
 import { usuarios } from './tablas/usuarios'
@@ -18,6 +19,7 @@ import { usuarios } from './tablas/usuarios'
 export const schema = {
   // 010-auth
   usuarios,
+  estadoMeta,
   sesiones,
   carteras,
   // 030-cuentas
@@ -32,6 +34,8 @@ export const schema = {
   gruposTransferencia,
   // 080-recurrencias
   reglasRecurrentes,
+  // 090-metas
+  metas,
 }
 
 export {
@@ -40,6 +44,7 @@ export {
   cuentas,
   grupos,
   gruposTransferencia,
+  metas,
   movimientos,
   reglasRecurrentes,
   sobres,
@@ -59,6 +64,11 @@ export type {
   NuevoMovimiento,
 } from './tablas/cuentas'
 export type { Grupo, NuevoGrupo } from './tablas/grupos'
+export type {
+  EstadoMeta,
+  Meta,
+  NuevaMeta,
+} from './tablas/metas'
 export type {
   NuevaReglaRecurrente,
   ReglaRecurrente,
