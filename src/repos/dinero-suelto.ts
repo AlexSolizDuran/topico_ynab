@@ -91,8 +91,8 @@ function saldoDeCartera(usuario_id: number, cartera_id: number) {
       )`
 }
 
-/** El dinero suelto: los saldos menos lo repartido. Como funcion, para no reusar el
- *  mismo fragmento dos veces en una consulta. */
+/** El dinero suelto: los saldos menos lo repartido. Como funcion, porque escribirlo aqui
+ *  deja el `select` de abajo en una linea por columna. */
 function suelto(usuario_id: number, cartera_id: number, periodo: string) {
   return sql<Dinero>`${sumaDeSaldos(usuario_id, cartera_id)} - ${sumaDeDisponibles(usuario_id, cartera_id, periodo)}`
 }
@@ -130,11 +130,11 @@ export async function resumenDeCartera(
   cartera_id: number,
   periodo: string,
 ): Promise<ResumenDeCartera> {
-  // Cada fragmento se pide con una llamada propia. Un `SQL` de Drizzle no se puede
-  // interpolar dos veces en la misma consulta: se recorre por sus chunks cada vez que
-  // aparece, y la segunda vez emite el texto de nuevo. Con una variable compartida,
-  // `asignado` salia bien y `dinero_suelto` salia con el doble, y las dos columnas
-  // parecían razonables por separado.
+  // Cada fragmento se pide con su propia llamada para que cada columna se lea como una
+  // sola expresion. Es legibilidad, no una necesidad: los `SQL` de Drizzle son inmutables
+  // y reutilizables, y el mismo fragmento puede aparecer las veces que haga falta. El
+  // `-14000.00` que se persiguio cuando se escribio esto era una expectativa mal
+  // calculada en la prueba, no una doble emision de la libreria.
   const [fila] = await filasDe<ResumenDeCartera>(db, sql`
     select
       ${sumaDeSaldos(usuario_id, cartera_id)} as patrimonio,

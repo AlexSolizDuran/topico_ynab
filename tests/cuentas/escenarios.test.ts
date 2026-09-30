@@ -136,13 +136,18 @@ describe('trazabilidad de cuentas', () => {
 
   it('la tabla no tiene columna de saldo, porque el saldo se deriva', async () => {
     const { readFile } = await import('node:fs/promises')
-    const fuente = await readFile('src/db/tablas/cuentas.ts', 'utf8')
-
-    // Un `saldo:` en la definicion de la tabla seria un saldo almacenado, que es
-    // exactamente lo que el requerimiento prohibe.
-    const definicion = fuente.slice(fuente.indexOf("pgTable(\n  'cuentas'"), fuente.indexOf('export const tipoDeMovimiento'))
+    // Los finales de linea se normalizan: el archivo llega con `\r\n` en Windows, y un
+    // `\n` a secas en el ancla dejaria el recorte vacio —la prueba pasaria sin comprobar
+    // nada en vez de avisar que el archivo cambio de forma.
+    const fuente = (await readFile('src/db/tablas/cuentas.ts', 'utf8')).replace(/\r\n/g, '\n')
+    const definicion = fuente.slice(
+      fuente.indexOf("pgTable(\n  'cuentas'"),
+      fuente.indexOf('export const tipoDeMovimiento'),
+    )
 
     expect(definicion).toContain('saldo_inicial')
+    // Un `saldo:` en la definicion de la tabla seria un saldo almacenado, que es
+    // exactamente lo que el requerimiento prohibe.
     expect(definicion).not.toMatch(/^\s*saldo:/m)
   })
 })

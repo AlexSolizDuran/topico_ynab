@@ -19,6 +19,7 @@ import { useFormStatus } from 'react-dom'
 import {
   accionArchivarSobre,
   accionAsignarASobre,
+  accionCorregirAsignacion,
   accionCrearSobre,
   accionEliminarSobre,
   accionMoverEntreSobres,
@@ -31,6 +32,25 @@ import {
 } from '../sobres/acciones'
 import { formatear } from '../dinero'
 import { Aviso, Boton, Campo } from './sesion'
+
+/**
+ * Una asignacion tal como la ve la persona: periodo, importe y por que esta ahi.
+ *
+ * El importe se pasa como `Dinero` y se formatea con `formatear`, que no convierte. El
+ * campo de correccion manda el mismo string por aparte, sin el `.00` de relleno, porque
+ * `paraCampo` es lo que un input puede castear en `numeric`.
+ */
+export interface AsignacionVista {
+  id: number
+  periodo: string
+  monto: string
+  motivo: 'usuario' | 'reasignacion'
+}
+
+const MOTIVO: Record<AsignacionVista['motivo'], string> = {
+  usuario: 'asignada por vos',
+  reasignacion: 'salio hacia otro sobre',
+}
 
 const INICIAL = { ok: false, error: undefined, campos: undefined, aviso: undefined } as const
 
@@ -113,6 +133,81 @@ export function FormularioNuevoSobre({
 }
 
 /**
+ * Corregir el importe de una asignacion.
+ *
+ * Va en su propio componente, y no en un `map` dentro de `FilaSobre`, porque
+ * `useActionState` es un hook: un hook en un bucle se llama tantas veces como elementos
+ * tenga la lista, y con dos asignaciones en el mismo sobre el segundo estado seria el
+ * del primero. Un componente por fila resuelve eso y deja el error pegado a la
+ * asignacion que fallo, en vez de un error comun arriba de la fila del sobre.
+ */
+function FilaAsignacion({
+  cartera_id,
+  sobre_id,
+  asignacion,
+  moneda,
+}: {
+  cartera_id: number
+  sobre_id: number
+  asignacion: AsignacionVista
+  moneda: string
+}) {
+  const [estado, accion] = useActionState(
+    (prev: ResultadoDeSobre, datos: FormData) =>
+      accionCorregirAsignacion(cartera_id, sobre_id, asignacion.id, prev, datos),
+    INICIAL,
+  )
+
+  return (
+    <li className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="text-xs text-slate-500">
+          {asignacion.periodo} · {MOTIVO[asignacion.motivo]}
+        </p>
+        <p
+          className={`font-mono text-sm font-semibold tabular-nums ${
+            asignacion.motivo === 'reasignacion' ? 'text-amber-800' : 'text-slate-900'
+          }`}
+        >
+          {formatear(asignacion.monto, moneda)}
+        </p>
+      </div>
+
+      {/* La contraparte de un movimiento entre sobres no se corrige desde aca: tocarla
+          sola descuadraria el disponible del sobre de destino, y el repositorio la
+          rechaza. Se lo dice en pantalla en vez de esconderla. */}
+      {asignacion.motivo === 'reasignacion' ? (
+        <p className="mt-1 text-xs text-slate-500">
+          Se corrige desde el sobre al que moviste el dinero.
+        </p>
+      ) : (
+        <form action={accion} className="mt-2 flex flex-wrap items-end gap-2">
+          {estado.error ? (
+            <p role="alert" className="w-full text-xs text-red-700">
+              {estado.error}
+            </p>
+          ) : null}
+          {estado.aviso ? (
+            <p role="status" className="w-full text-xs text-emerald-700">
+              {estado.aviso}
+            </p>
+          ) : null}
+          <div className="min-w-40 flex-1">
+            <Campo
+              nombre="monto"
+              etiqueta="Importe de la asignacion"
+              error={estado.campos?.monto}
+              ayuda="El disponible se ajusta en el acto."
+            />
+          </div>
+          <AccionPendiente>Corregir</AccionPendiente>
+        </form>
+      )}
+    </li>
+  )
+}
+
+/**
  * Un sobre con su disponible y las cinco cosas que se le pueden hacer.
  *
  * Los formularios van en `<details>` para no mostrar quince campos por sobre: la accion
@@ -131,6 +226,7 @@ export function FilaSobre({
   grupo_id,
   otrosSobres,
   dinero_suelto,
+  asignaciones,
 }: {
   cartera_id: number
   sobre_id: number
@@ -144,6 +240,7 @@ export function FilaSobre({
   grupo_id: number
   otrosSobres: ReadonlyArray<{ id: number; nombre: string }>
   dinero_suelto: string
+  asignaciones: ReadonlyArray<AsignacionVista>
 }) {
   const [asignar, accionAsignar] = useActionState(
     (prev: ResultadoDeSobre, datos: FormData) =>
@@ -288,6 +385,29 @@ export function FilaSobre({
               <AccionPendiente>Mover</AccionPendiente>
             </form>
           ) : null}
+
+          <div className="flex flex-col gap-2">
+            <h5 className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
+              Asignaciones de este sobre
+            </h5>
+            {asignaciones.length === 0 ? (
+              <p className="text-xs text-slate-500">
+                Este sobre todavia no tiene asignaciones. Su disponible esta en cero.
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {asignaciones.map((asignacion) => (
+                  <FilaAsignacion
+                    key={asignacion.id}
+                    cartera_id={cartera_id}
+                    sobre_id={sobre_id}
+                    asignacion={asignacion}
+                    moneda={moneda}
+                  />
+                ))}
+              </ul>
+            )}
+          </div>
 
           <form action={accionRenombrar} className="flex flex-wrap items-end gap-2">
             {renombrar.error ? (

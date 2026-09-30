@@ -2,8 +2,10 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { PGlite } from '@electric-sql/pglite'
 import { drizzle } from 'drizzle-orm/pglite'
+import type { SQL } from 'drizzle-orm'
 import { schema } from '@/db/schema'
 import type { Base } from '@/db/tipos'
+import { filas as filasDe } from '@/repos/filas'
 
 /**
  * Base de datos de pruebas: Postgres real compilado a WebAssembly.
@@ -66,4 +68,24 @@ export async function crearBaseDePruebas(): Promise<BaseDePruebas> {
     pg,
     cerrar: () => pg.close(),
   }
+}
+
+/**
+ * La unica fila de una consulta, o un error que lo dice.
+ *
+ * Con `noUncheckedIndexedAccess`, `const [fila] = await filas(db, sql)` deja `fila` en
+ * `T | undefined`, y cada asercion tendria que llevar un `!` o un `?.`. El `!` esconde el
+ * fallo: si la consulta no devuelve nada, la prueba revienta con "cannot read properties
+ * of undefined" en una linea que no dice nada del dominio. Este error si lo dice.
+ *
+ * Se apoya en `filas` y no repite el casteo de `db.execute`: esa normalizacion entre el
+ * cliente de Neon y el de PGlite tiene una sola copia en el repositorio, y las pruebas no
+ * son el lugar para abrir una segunda.
+ */
+export async function unaFila<T>(db: Base, consulta: SQL): Promise<T> {
+  const encontradas = await filasDe<T>(db, consulta)
+  if (encontradas.length !== 1) {
+    throw new Error(`la consulta devolvio ${encontradas.length} filas y se esperaba 1`)
+  }
+  return encontradas[0] as T
 }

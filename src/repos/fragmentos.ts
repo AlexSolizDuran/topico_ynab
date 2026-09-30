@@ -38,9 +38,14 @@ export function finDePeriodo(periodo: string): SQL {
  *
  * Los traspasos **si** cuentan acá, y por eso es distinto del disponible de un sobre: un
  * traspaso entre dos cuentas de la misma cartera mueve saldo de una a otra, y la cartera
- * queda igual, pero cada cuenta tiene que reflejarlo. Un traspaso entre carteras, en
- * cambio, no toca la cartera de destino: eso lo resuelve `060-transacciones`, con un
- * movimiento de la cartera de origen y ningun par del otro lado.
+ * queda igual, pero cada cuenta tiene que reflejarlo.
+ *
+ * **No existe el traspaso entre carteras.** `traspasos` R1 lo rechaza, y por eso este
+ * comentario antes describia un caso que no se puede dar: un movimiento de la cartera de
+ * origen sin par en la de destino. Ese par es justamente lo que dejaria descuadrado el
+ * patrimonio de la segunda cartera, asi que el requisito lo prohibe. El emparejamiento de
+ * las dos patas -con signo opuesto y mismo `transferencia_id`- es de `070-traspasos`; aca
+ * la columna existe y la cascada de `060` la lee, pero nadie crea el grupo todavia.
  */
 export function saldoDeCuenta(alias: string): SQL<Dinero> {
   return sql<Dinero>`${sql.raw(alias)}.saldo_inicial + coalesce((

@@ -17,6 +17,7 @@ import {
   carteras,
   cuentas,
   grupos,
+  gruposTransferencia,
   movimientos,
   sesiones,
   usuarios,
@@ -234,6 +235,8 @@ export interface OpcionesMovimiento {
   monto: string
   tipo?: 'gasto' | 'ingreso' | 'traspaso'
   sobre_id?: number
+  /** El grupo de traspaso, si esta fila es una pata. Lo escribe `crearTransferencia`. */
+  transferencia_id?: number
   fecha?: string
   descripcion?: string
   comercio?: string
@@ -264,12 +267,92 @@ export async function crearMovimiento(
       descripcion: opciones.descripcion ?? unico('Movimiento'),
       comercio: opciones.comercio ?? null,
       origen: opciones.origen ?? 'manual',
+      transferencia_id: opciones.transferencia_id ?? null,
       eliminado_en: opciones.eliminado_en ?? null,
     })
     .returning({ id: movimientos.id })
 
   if (!creado) throw new Error('crearMovimiento no devolvio id')
   return creado.id
+}
+
+/* -------------------------------------------------------------------------- */
+/* 060-transacciones                                                          */
+/* -------------------------------------------------------------------------- */
+
+export interface OpcionesGrupoTransferencia {
+  descripcion?: string
+  fecha?: string
+}
+
+/**
+ * Inserta un grupo de traspaso y devuelve su id.
+ *
+ * En `060` no hay formulario que cree una transferencia, asi que las pruebas que necesitan
+ * patas —la cascada de R6, el rechazo de editar una pata— arman el par aca, que es la
+ * forma en que `070-traspasos` lo va a hacer. Ver D5.
+ */
+export async function crearGrupoTransferencia(
+  db: Base,
+  opciones: OpcionesGrupoTransferencia = {},
+): Promise<number> {
+  const [creado] = await db
+    .insert(gruposTransferencia)
+    .values({
+      descripcion: opciones.descripcion ?? unico('Traspaso'),
+      fecha: opciones.fecha ?? '2026-09-27',
+    })
+    .returning({ id: gruposTransferencia.id })
+
+  if (!creado) throw new Error('crearGrupoTransferencia no devolvio id')
+  return creado.id
+}
+
+/**
+ * Inserta un traspaso completo: el grupo y sus dos patas, y devuelve los tres ids.
+ *
+ * Las patas van con **signo opuesto** y sin sobre, que es lo que `traspasos` R1 exige. Que
+ * la fabrica arme el par completo es lo que permite que una prueba verifique la cascada de
+ * R6 sin que el repositorio sepa crear traspasos todavia.
+ */
+export async function crearTransferencia(
+  db: Base,
+  opciones: {
+    origen_cuenta_id: number
+    destino_cuenta_id: number
+    monto: string
+    descripcion?: string
+    fecha?: string
+    origen_sobre_id?: number
+    destino_sobre_id?: number
+  },
+): Promise<{ grupo_id: number; origen_id: number; destino_id: number }> {
+  const grupo_id = await crearGrupoTransferencia(db, {
+    descripcion: opciones.descripcion,
+    fecha: opciones.fecha,
+  })
+
+  const monto = opciones.monto.replace('-', '')
+  const origen_id = await crearMovimiento(db, {
+    cuenta_id: opciones.origen_cuenta_id,
+    monto: `-${monto}`,
+    tipo: 'traspaso',
+    sobre_id: opciones.origen_sobre_id,
+    transferencia_id: grupo_id,
+    fecha: opciones.fecha,
+    descripcion: `${opciones.descripcion ?? 'Traspaso'} (salida)`,
+  })
+  const destino_id = await crearMovimiento(db, {
+    cuenta_id: opciones.destino_cuenta_id,
+    monto,
+    tipo: 'traspaso',
+    sobre_id: opciones.destino_sobre_id,
+    transferencia_id: grupo_id,
+    fecha: opciones.fecha,
+    descripcion: `${opciones.descripcion ?? 'Traspaso'} (entrada)`,
+  })
+
+  return { grupo_id, origen_id, destino_id }
 }
 
 export interface OpcionesAsignacion {

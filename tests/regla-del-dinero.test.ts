@@ -1,5 +1,4 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs'
-import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 /**
@@ -35,6 +34,14 @@ const EXENTOS: Record<string, string> = {
     'Convierte texto a ENTERO de url y de formulario, nunca un importe. Ver el modulo.',
 }
 
+/**
+ * Los `.ts` y `.tsx` de una carpeta, con separador `/` en la ruta devuelta.
+ *
+ * El separador es fijo a proposito. En Windows `join` arma `src\enteros.ts`, y la
+ * excepcion de abajo esta escrita con `/`: sin normalizar, el modulo exento seeria
+ * bloqueado en Windows y permitido en Linux, y la regla del dinero dependeria del
+ * sistema donde se corre. Los dos separadores los acepta el sistema de archivos.
+ */
 function archivosDe(carpeta: string): string[] {
   const encontrados: string[] = []
   let entradas: string[]
@@ -44,7 +51,7 @@ function archivosDe(carpeta: string): string[] {
     return encontrados
   }
   for (const entrada of entradas) {
-    const ruta = join(carpeta, entrada)
+    const ruta = `${carpeta}/${entrada}`
     if (statSync(ruta).isDirectory()) {
       encontrados.push(...archivosDe(ruta))
     } else if (/\.tsx?$/.test(entrada)) {

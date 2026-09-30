@@ -61,8 +61,13 @@ export async function totalDeGrupo(
   grupo_id: number,
   periodo: string,
 ): Promise<Dinero> {
+  // El cero del `coalesce` va casteado, y no por gusto. Sin filas, lo que se suma es la
+  // suma de los dos `coalesce` de `disponibleDeSobre`, que con asignaciones vacias y sin
+  // movimientos son `integer` mas `integer`: el `sum` sale `bigint` y el `coalesce` con un
+  // `0` de enteros se queda en `bigint`. El total cruzaba el limite de la fila como `'0'`
+  // en vez de `'0.00'`, y el mismo numero con dos textos distintos no es un `Dinero`.
   const [fila] = await filasDe<{ total: Dinero }>(db, sql`
-    select coalesce(sum(${disponibleDeSobre(sql.raw('s.id'), periodo)}), 0) as total
+    select coalesce(sum(${disponibleDeSobre(sql.raw('s.id'), periodo)}), 0::numeric(16,2)) as total
     from sobres s
     where s.grupo_id = ${grupo_id}
       and s.archivado = false

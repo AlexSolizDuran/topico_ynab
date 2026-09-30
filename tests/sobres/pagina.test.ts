@@ -97,7 +97,10 @@ afterEach(async () => {
 })
 
 async function html(): Promise<string> {
-  const pagina = PaginaCartera({ params: Promise.resolve({ cartera: String(cartera) }) } as never)
+  const pagina = PaginaCartera({
+    params: Promise.resolve({ cartera: String(cartera) }),
+    searchParams: Promise.resolve({}),
+  } as never)
   return renderToStaticMarkup(await pagina)
 }
 
@@ -254,7 +257,10 @@ describe('la pagina de la cartera, con sobres', () => {
     await crearSobre(base.db, otro, ajena, grupoAjeno, 'Comida')
 
     await expect(
-      PaginaCartera({ params: Promise.resolve({ cartera: String(ajena) }) } as never),
+      PaginaCartera({
+        params: Promise.resolve({ cartera: String(ajena) }),
+        searchParams: Promise.resolve({}),
+      } as never),
     ).rejects.toThrow(/404/)
   })
 })

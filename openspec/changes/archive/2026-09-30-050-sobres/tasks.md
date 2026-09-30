@@ -17,7 +17,7 @@ orden al final.
 
 - [x] 2.1 `src/repos/fragmentos.ts` con `disponibleDeSobre` y `saldoDeCuenta` como unica fuente. Verificar que `listarSobres`, `totalDeGrupo` y `resumenDeCartera` dan el mismo numero para el mismo sobre
 - [x] 2.2 `src/repos/filas.ts` normalizando PGlite y `pg`. Verificar que un `total` de la vista y el mismo total del repositorio coinciden
-- [ ] 2.3 **Corregir el comentario de `src/repos/dinero-suelto.ts:133`.** Afirma que un `SQL` de Drizzle no se puede interpolar dos veces y le echa la culpa de un `-14000.00` que era una expectativa mal calculada. Verificar que la afirmacion se borra y que la prueba sigue verde, porque el refactor a funciones se mantiene por legibilidad y no por necesidad
+- [x] 2.3 **Corregir el comentario de `src/repos/dinero-suelto.ts:133`.** Afirma que un `SQL` de Drizzle no se puede interpolar dos veces y le echa la culpa de un `-14000.00` que era una expectativa mal calculada. Verificar que la afirmacion se borra y que la prueba sigue verde, porque el refactor a funciones se mantiene por legibilidad y no por necesidad
 
 ## 3. Repositorio
 
@@ -35,14 +35,14 @@ orden al final.
 ## 4. Total de grupo
 
 - [x] 4.1 `totalDeGrupo` en `src/repos/grupos.ts`, sumando los disponibles de `fragmentos.ts` y excluyendo los archivados. Verificar con las cuatro pruebas del bloque `el total de un grupo`
-- [ ] 4.2 **Castear el cero de `coalesce` a `numeric(16,2)`** en `totalDeGrupo`. Sin filas, `coalesce(sum(...), 0)` devuelve el entero `0` y el total llega como `'0'` en vez de `'0.00'`. Verificar que las dos pruebas en rojo pasan: `deja fuera los sobres archivados del grupo` y `no cuenta un sobre de otro grupo ni de otra cartera`
+- [x] 4.2 **Castear el cero de `coalesce` a `numeric(16,2)`** en `totalDeGrupo`. Sin filas, `coalesce(sum(...), 0)` devuelve el entero `0` y el total llega como `'0'` en vez de `'0.00'`. Verificar que las dos pruebas en rojo pasan: `deja fuera los sobres archivados del grupo` y `no cuenta un sobre de otro grupo ni de otra cartera`
 
 ## 5. Entrada y vista
 
 - [x] 5.1 `src/sobres/validacion.ts` con los importes **como texto** y comparacion en `BigInt` contra el tope de `numeric(16,2)`. Verificar que rechaza negativo, cero, decimal y un numero de mas de 14 digitos enteros
 - [x] 5.2 `src/sobres/acciones.ts` con 11 Server Actions, todas con sesion y token de proteccion, y el `cartera_id` tomado del servidor y no del formulario. Verificar con la prueba de pagina que un `cartera_id` ajeno no alcanza
 - [x] 5.3 `src/components/sobres.tsx` con alta, edicion, asignar, tapar, mover, archivar, eliminar y restaurar. Verificar que el build no arrastra el servidor al cliente
-- [ ] 5.4 **Exponer la correccion de asignaciones en la UI.** `accionCorregirAsignacion` existe y funciona, pero ningun componente la llama: el requisito `Correccion de una asignacion` esta cubierto en el repositorio y no en la pantalla. Verificar con una prueba de pagina que el importe corregido se ve
+- [x] 5.4 **Exponer la correccion de asignaciones en la UI.** `accionCorregirAsignacion` existe y funciona, pero ningun componente la llama: el requisito `Correccion de una asignacion` esta cubierto en el repositorio y no en la pantalla. Verificar con una prueba de pagina que el importe corregido se ve
 
 ## 6. Pagina
 
@@ -50,22 +50,22 @@ orden al final.
 - [x] 6.2 Total por grupo **fuero** del `<details>`, para que al plegar se oculten los sobres pero no la cifra. Verificar con la prueba de grupo plegado del punto 8.1
 - [x] 6.3 Listado de sobres archivados y de archivados con saldo por devoluciones. Verificar con la prueba de que una devolucion a un archivado lo hace reaparecer
 - [x] 6.4 Corregir `tests/cuentas/pagina.test.ts`, que mockeaba la pagina y rompio al aparecer el componente de sobres. Verificar que la suite de cuentas sigue verde
-- [ ] 6.5 **Corregir el comentario del total en la pagina.** Dice que el total vive en el `<summary>` cuando vive en un `<p>` hermano, y dice "sin `open` inicial" cuando el `<details>` lleva `open`. Verificar que el comentario describe lo que el codigo hace
+- [x] 6.5 **Corregir el comentario del total en la pagina.** Dice que el total vive en el `<summary>` cuando vive en un `<p>` hermano, y dice "sin `open` inicial" cuando el `<details>` lleva `open`. Verificar que el comentario describe lo que el codigo hace
 
 ## 7. Trazabilidad
 
-- [ ] 7.1 Prueba de **grupo plegado**, el septimo diferido de `grupos`. Verificar que el total queda fuera del `<details>` en el HTML renderizado, y no que dependa del estado de React
-- [ ] 7.2 Mover los **siete** escenarios de `DIFERIDOS` a `MAPA` en `tests/grupos/escenarios.test.ts`, cada uno con su prueba
-- [ ] 7.3 Ampliar el escaneo de referencias de `tests/grupos` a `tests/sobres` y usar ruta completa en las referencias, porque `sobres.test.ts` y `grupos.test.ts` comparten nombres de prueba. Verificar que la prueba de que cada referencia apunta a una prueba existente sigue mirando bien
-- [ ] 7.4 Pruebas de `src/sobres/validacion.ts`. Verificar el recorte de espacios, los limites de longitud y el rechazo de los nombres prohibidos
-- [ ] 7.5 Pruebas de `src/sobres/acciones.ts`. Verificar que una accion sin sesion no hace nada, que el token de proteccion se exige, y que cada error de dominio llega a la pantalla con su mensaje
+- [x] 7.1 Prueba de **grupo plegado**, el septimo diferido de `grupos`. Verificar que el total queda fuera del `<details>` en el HTML renderizado, y no que dependa del estado de React
+- [x] 7.2 Mover los **siete** escenarios de `DIFERIDOS` a `MAPA` en `tests/grupos/escenarios.test.ts`, cada uno con su prueba
+- [x] 7.3 Ampliar el escaneo de referencias de `tests/grupos` a `tests/sobres` y usar ruta completa en las referencias, porque `sobres.test.ts` y `grupos.test.ts` comparten nombres de prueba. Verificar que la prueba de que cada referencia apunta a una prueba existente sigue mirando bien
+- [x] 7.4 Pruebas de `src/sobres/validacion.ts`. Verificar el recorte de espacios, los limites de longitud y el rechazo de los nombres prohibidos
+- [x] 7.5 Pruebas de `src/sobres/acciones.ts`. Verificar que una accion sin sesion no hace nada, que el token de proteccion se exige, y que cada error de dominio llega a la pantalla con su mensaje
 
 ## 8. Verificacion
 
-- [ ] 8.1 `npx tsc --noEmit` sin errores
-- [ ] 8.2 `npx vitest run` verde, y en verde las dos pruebas de 4.2
-- [ ] 8.3 `npm run build` completa
-- [ ] 8.4 `openspec validate --specs --strict` pasa con las 12 capacidades, y el change valida en estricto
+- [x] 8.1 `npx tsc --noEmit` sin errores
+- [x] 8.2 `npx vitest run` verde, y en verde las dos pruebas de 4.2
+- [x] 8.3 `npm run build` completa
+- [x] 8.4 `openspec validate --specs --strict` pasa con las 12 capacidades, y el change valida en estricto. Resuelto el 2026-09-30: el CLI se lanzo con `npx @fission-ai/openspec@latest` —`@fission-ai/openspec` ya no esta en el global de npm, y `AGENTS.md` lo da por instalado—. 12 passed / 0 failed, y `validate 050-sobres --strict` responde `Change '050-sobres' is valid`. Con `skip_specs: true` no hay deltas que revisar
 
 ## Nota sobre el orden
 

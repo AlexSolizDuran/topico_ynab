@@ -68,6 +68,30 @@ export const tipoDeMovimiento = pgEnum('tipo_movimiento', ['gasto', 'ingreso', '
 export const origenDeMovimiento = pgEnum('origen_movimiento', ['manual', 'recurrente'])
 
 /**
+ * `grupos_transferencia` — el par de patas de un traspaso entre cuentas.
+ *
+ * Una fila es **una** transferencia, no un movimiento: las dos patas salen por
+ * `transferencia_id` y comparten esta fila como su unico identificador de grupo.
+ * Por eso el borrado en cascada de `R6` se puede resolver con una sola instruccion
+ * sobre las filas que comparten el valor.
+ *
+ * **No tiene `cartera_id`.** No la necesita: la cartera de un traspaso es la de cada
+ * pata, y las dos pueden estar en carteras distintas —de hecho es el caso normal— asi
+ * que una columna unica seria una de las dos, no la cartera del traspaso. Ver D2 y D5.
+ *
+ * Sin consumidor en `060`: el tipo `traspaso` se acepta y la cascada se garantiza, pero
+ * **el formulario de traspaso es de `070-traspasos`**. La tabla entra ahora porque
+ * agregar una columna a una tabla ya desplegada es una migracion mas, y este repo trata
+ * las migraciones aplicadas como inmutables.
+ */
+export const gruposTransferencia = pgTable('grupos_transferencia', {
+  id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+  descripcion: varchar('descripcion', { length: 255 }).notNull(),
+  fecha: date('fecha', { mode: 'string' }).notNull(),
+  creado_en: timestamp('creado_en', { withTimezone: true }).notNull().defaultNow(),
+})
+
+/**
  * `movimientos` — el libro de donde sale el saldo de una cuenta y el gastado de un
  * sobre.
  *
@@ -76,7 +100,11 @@ export const origenDeMovimiento = pgEnum('origen_movimiento', ['manual', 'recurr
  * cumple sin ella**. Un saldo derivado necesita la tabla de la que se deriva, y
  * esperar a `060` dejaria cuatro de los seis escenarios de `cuentas` sin
  * comportamiento real. `060-transacciones` agrega el comportamiento —crear, editar,
- * eliminar, clasificar— sobre esta tabla ya existente.
+ * eliminar, clasificar— sobre esta tabla ya existente, mas la columna
+ * `transferencia_id` y su indice parcial, que si eran de `060`. Ver D5.
+ *
+ * **No tiene `periodo` ni `cartera_id`, y no se le agregan.** El periodo sale de
+ * `date_trunc('month', fecha)` y la cartera de la cuenta. Ver D1 y D2.
  *
  * `sobre_id` es nullable a proposito: un traspaso entre cuentas no toca ningun
  * sobre, y una cuenta no necesita uno. `monto` lleva el signo, de modo que la suma
@@ -102,6 +130,25 @@ export const movimientos = pgTable(
      */
     sobre_id: integer('sobre_id').references(() => sobres.id, { onDelete: 'set null' }),
 
+    /**
+     * El grupo al que pertenece la pata, en un traspaso entre cuentas.
+     *
+     * `null` en todo movimiento que no es traspaso, y con el id del grupo en **las dos**
+     * patas de un traspaso: es esa columna compartida la que permite la cascada. Ver D5 y
+     * D7.
+     *
+     * El emparejamiento de los signos opuestos es responsabilidad de `070-traspasos`, que
+     * es quien crea el grupo. Aca la columna solo tiene que poder leerse y agruparse.
+     *
+     * La FK va con `on delete cascade` para que borrar el grupo en la base borre sus
+     * patas. El borrado de una pata en la aplicacion es otra cosa —una baja logica en
+     * cascada sobre el grupo, no un borrado de fila— y lo resuelve
+     * `eliminarMovimiento` con un unico `update`. Ver D7.
+     */
+    transferencia_id: integer('transferencia_id').references(() => gruposTransferencia.id, {
+      onDelete: 'cascade',
+    }),
+
     tipo: tipoDeMovimiento('tipo').notNull(),
 
     /** Con signo: negativo gasto, positivo ingreso. `numeric(16,2)`, manejado como string. */
@@ -125,6 +172,13 @@ export const movimientos = pgTable(
     // Con la FK ya puesta, el indice parcial sobre vivos es el que usa la consulta del
     // disponible: suma los movimientos de un sobre hasta el periodo.
     index('movimientos_sobre_id').on(tabla.sobre_id).where(sql`${tabla.eliminado_en} is null`),
+    // El indice que usan la cascada de R6 y la busqueda de patas del grupo. Es
+    // **parcial** a proposito: las dos consultas preguntan por las patas vivas, y las
+    // eliminadas no tienen por que pagar el indice —que se agranda con cada baja logica
+    // de una pata si el indice fuera completo.
+    index('movimientos_transferencia_id')
+      .on(tabla.transferencia_id)
+      .where(sql`${tabla.eliminado_en} is null`),
   ],
 )
 
@@ -132,3 +186,5 @@ export type Cuenta = typeof cuentas.$inferSelect
 export type NuevaCuenta = typeof cuentas.$inferInsert
 export type Movimiento = typeof movimientos.$inferSelect
 export type NuevoMovimiento = typeof movimientos.$inferInsert
+export type GrupoTransferencia = typeof gruposTransferencia.$inferSelect
+export type NuevoGrupoTransferencia = typeof gruposTransferencia.$inferInsert

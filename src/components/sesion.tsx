@@ -6,7 +6,7 @@
  * `FormularioSesion`.
  */
 
-import type { ReactNode } from 'react'
+import type { HTMLInputTypeAttribute, ReactNode } from 'react'
 
 /** Aviso general, arriba del formulario. */
 export function Aviso({
@@ -49,16 +49,33 @@ export function Campo({
   error,
   minLength,
   autoFocus,
+  defaultValue,
 }: {
   nombre: string
   etiqueta: string
-  tipo?: 'text' | 'email' | 'password'
+  /**
+   * El `type` del `<input>`, el de HTML y no una union propia.
+   *
+   * `transacciones` necesita `date` —la fecha de un movimiento es un dia local, y por eso
+   * se pide con `<input type="date">` y no con un `text` que hay que interpretar—. Enumerar
+   * los tipos aca seria una lista que queda corta en el proximo formulario y que obliga a
+   * tocar este archivo compartido cada vez. Los tipos que existian antes siguen valiendo.
+   */
+  tipo?: HTMLInputTypeAttribute
   autoComplete?: string
   requerido?: boolean
   ayuda?: string
   error?: string
   minLength?: number
   autoFocus?: boolean
+  /**
+   * El valor con el que el campo arranca escrito.
+   *
+   * Va como `defaultValue` y no como `value`: un `value` sin `onChange` vuelve el campo de
+   * solo lectura en React, y un formulario de correccion que no se puede corregir no
+   * corrige nada. Es lo que necesita el formulario de edicion de `transacciones`.
+   */
+  defaultValue?: string
 }) {
   const idAyuda = ayuda ? `${nombre}-ayuda` : undefined
   const idError = error ? `${nombre}-error` : undefined
@@ -74,6 +91,7 @@ export function Campo({
         id={nombre}
         name={nombre}
         type={tipo}
+        defaultValue={defaultValue}
         required={requerido}
         autoComplete={autoComplete}
         minLength={minLength}

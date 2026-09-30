@@ -8,7 +8,7 @@
  * Identificadores en espanol, sin acentos, para calzar con `modelo.puml`.
  */
 import { carteras } from './tablas/carteras'
-import { cuentas, movimientos } from './tablas/cuentas'
+import { cuentas, gruposTransferencia, movimientos } from './tablas/cuentas'
 import { grupos } from './tablas/grupos'
 import { sesiones } from './tablas/sesiones'
 import { asignaciones, sobres } from './tablas/sobres'
@@ -27,17 +27,31 @@ export const schema = {
   // 050-sobres
   sobres,
   asignaciones,
+  // 060-transacciones
+  gruposTransferencia,
 }
 
-export { asignaciones, carteras, cuentas, grupos, movimientos, sobres, sesiones, usuarios }
+export {
+  asignaciones,
+  carteras,
+  cuentas,
+  grupos,
+  gruposTransferencia,
+  movimientos,
+  sobres,
+  sesiones,
+  usuarios,
+}
 
 // Los tipos viajan por aqui, y no por cada archivo de tabla, para que los
 // repositorios tengan un solo lugar del que importar.
 export type { Cartera, NuevaCartera } from './tablas/carteras'
 export type {
   Cuenta,
+  GrupoTransferencia,
   Movimiento,
   NuevaCuenta,
+  NuevoGrupoTransferencia,
   NuevoMovimiento,
 } from './tablas/cuentas'
 export type { Grupo, NuevoGrupo } from './tablas/grupos'

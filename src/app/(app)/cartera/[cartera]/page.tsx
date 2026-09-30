@@ -8,6 +8,7 @@ import {
   listarSobresArchivadosConSaldo,
   listarSobresEnNegativo,
 } from '@/repos/sobres'
+import { listarAsignaciones } from '@/repos/asignaciones'
 import { avisarDesborde, resumenDeCartera } from '@/repos/dinero-suelto'
 import {
   listarCuentas,
@@ -15,12 +16,25 @@ import {
   saldoDeCuenta,
   tieneMovimientos,
 } from '@/repos/cuentas'
+import {
+  listarMovimientos,
+  listarMovimientosEliminados,
+  type FiltroMovimientos,
+  type MovimientoVisto,
+} from '@/repos/movimientos'
+import { ErroresDeMovimiento, validarFiltro } from '@/transacciones/validacion'
 import { sesionActual } from '@/sesion/server'
 import { formatear } from '@/dinero'
 import { aEntero } from '@/enteros'
 import { FilaCuenta, FilaCuentaArchivada, FormularioNuevaCuenta } from '@/components/cuentas'
 import { FilaGrupo, FilaGrupoArchivado, FormularioNuevoGrupo } from '@/components/grupos'
 import { FilaSobre, FilaSobreArchivado, FormularioNuevoSobre } from '@/components/sobres'
+import {
+  FormularioNuevoMovimiento,
+  ListaMovimientos,
+  ListaMovimientosEliminados,
+  type MovimientoEnVista,
+} from '@/components/transacciones'
 
 /**
  * El mes que se mira.
@@ -35,6 +49,44 @@ import { FilaSobre, FilaSobreArchivado, FormularioNuevoSobre } from '@/component
 function periodoActual(): string {
   const hoy = new Date()
   return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`
+}
+
+/**
+ * Los filtros del listado de movimientos, tal como vienen en la URL.
+ *
+ * R9 pide que el filtro viva en la URL, asi que la pagina lo lee de `searchParams` y no de
+ * un estado del cliente. Un filtro mal escrito se devuelve **invalido**, y una lista vacia con
+ * el aviso de "no coincide con el filtro": ignorarlo y mostrar todo seria peor, porque el
+ * usuario creeria que filtro y son sus datos los que no aparecen.
+ */
+function filtroDeUrl(
+  searchParams: Record<string, string | string[] | undefined>,
+): { datos: ReturnType<typeof validarFiltro>; valido: boolean } {
+  const primero = (valor: string | string[] | undefined): string =>
+    Array.isArray(valor) ? (valor[0] ?? '') : (valor ?? '')
+
+  const crudo = {
+    texto: primero(searchParams.texto),
+    cuenta_id: primero(searchParams.cuenta_id),
+    sobre_id: primero(searchParams.sobre_id),
+    // El `<select>` de tipo manda `''` en su opcion vacia, y `''` **no** es un `tipo`
+    // valido: `z.enum` solo acepta las tres etiquetas. Sin esta conversion, `tipo=''` —o sea,
+    // toda URL sin filtro— haria fallar `validarFiltro` y la pagina caeria al caso de "filtro
+    // mal escrito" siempre. Lo que significa "no filtrar por tipo" es la **ausencia** de la
+    // clave, no una cadena vacia.
+    tipo: primero(searchParams.tipo) || undefined,
+    desde: primero(searchParams.desde),
+    hasta: primero(searchParams.hasta),
+  }
+
+  try {
+    return { datos: validarFiltro(crudo), valido: true }
+  } catch (error) {
+    // `validarFiltro` tira `ErroresDeMovimiento`; cualquier otra cosa seria un error real y
+    // no un filtro raro, asi que no se la come este `catch`.
+    if (error instanceof ErroresDeMovimiento) return { datos: validarFiltro({}), valido: false }
+    throw error
+  }
 }
 
 export const metadata = { title: 'Cartera' }
@@ -54,8 +106,10 @@ export const metadata = { title: 'Cartera' }
  */
 export default async function PaginaCuentas({
   params,
+  searchParams,
 }: {
   params: Promise<{ cartera: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
   const sesion = await sesionActual()
   if (!sesion) redirect('/entrar')
@@ -69,6 +123,7 @@ export default async function PaginaCuentas({
   if (!cartera) notFound()
 
   const periodo = periodoActual()
+  const filtroUrl = filtroDeUrl(await searchParams)
 
   const [
     gruposActivos,
@@ -135,6 +190,30 @@ export default async function PaginaCuentas({
   const saldoArchivada = new Map(saldosDeArchivadas.map((c) => [c.id, c.saldo]))
 
   /**
+   * Las asignaciones de cada sobre, para poder corregirlas.
+   *
+   * Una asignacion corregida es lo que hace que el disponible tenga de donde salir: sin
+   * la fila a la vista, el unico modo de cambiar un importe asignado seria compensarlo
+   * con otra asignacion, y el disponible quedaria bien por la suma mientras el
+   * historial dijera otra cosa.
+   *
+   * Van por sobre y no en una consulta para toda la cartera porque cada fila necesita la
+   * suya, y `listarAsignaciones` ya exige `usuario_id` y `cartera_id` antes de devolver
+   * una: el cruce de aislamiento esta en el repositorio, no en esta pagina. Solo se
+   * piden para los sobres desplegados; los archivados no admiten correccion.
+   */
+  const asignacionesPorSobre = new Map(
+    (
+      await Promise.all(
+        sobres.map(async (sobre) => [
+          sobre.id,
+          await listarAsignaciones(db, sesion.usuario_id, cartera_id, sobre.id),
+        ] as const),
+      )
+    ).map((entrada) => [entrada[0], entrada[1]]),
+  )
+
+  /**
    * Que archivado va en que lista.
    *
    * Los archivados se parten en dos: los que no tienen nada pendiente y los que
@@ -171,6 +250,115 @@ export default async function PaginaCuentas({
     ),
   )
 
+
+  /**
+   * Los movimientos de **esta** cartera, filtrados por la URL.
+   *
+   * `listarMovimientos` no acepta `cartera_id`: R10 prohibe aceptar una cartera declarada, y
+   * el repositorio deduce la cartera de la cuenta de cada fila y filtra por
+   * `carteras.usuario_id`. Devuelve, entonces, los movimientos de **todas** las carteras del
+   * usuario, que es lo que R9 pide en plural.
+   *
+   * Esta pagina es de una sola cartera, asi que el recorte se hace aca sobre `cartera_id`, que
+   * la fila ya trae derivado (D2). Es un filtro sobre un entero, no sobre dinero: no toca la
+   * regla del dinero y no necesita ir en SQL. Lo que **no** se hace es pasarle un
+   * `cartera_id` al repositorio para que recorte el, porque ese identificador viene de la URL
+   * y el repositorio no tiene forma de saber que es de verdad.
+   */
+  const movimientosDeEstaCartera = await listarMovimientos(
+    db,
+    sesion.usuario_id,
+    filtroDeRepos(filtroUrl.datos),
+  )
+
+  /**
+   * La fila del repositorio, reducida a lo que la vista necesita.
+   *
+   * Va en una funcion porque la lista y la lista de eliminados tienen que dibujar **la misma
+   * fila**: si cada una mapeara a su manera, un movimiento borrado y ese mismo restaurado se
+   * verian distinto, y el usuario no reconoceria que es el mismo.
+   */
+  function aEnVista(movimiento: MovimientoVisto): MovimientoEnVista {
+    return {
+      id: movimiento.id,
+      cuenta_id: movimiento.cuenta_id,
+      cuenta_nombre: movimiento.cuenta_nombre,
+      sobre_id: movimiento.sobre_id,
+      sobre_nombre: movimiento.sobre_nombre,
+      tipo: movimiento.tipo,
+      monto: movimiento.monto,
+      fecha: movimiento.fecha,
+      descripcion: movimiento.descripcion,
+      comercio: movimiento.comercio,
+      pendiente: movimiento.pendiente,
+      pata: movimiento.transferencia_id !== null,
+    }
+  }
+
+  const movimientos: MovimientoEnVista[] = movimientosDeEstaCartera
+    .filter((movimiento) => movimiento.cartera_id === cartera_id)
+    .map(aEnVista)
+
+  /**
+   * Los eliminados de esta cartera, para poder restaurar.
+   *
+   * Sin esto, R6 seria solo la mitad de lo que dice: la fila se conserva, pero no hay de
+   * donde volver a tomarla. Sin filtros a proposito —un filtro que oculta el unico movimiento
+   * que se puede deshacer es peor que no tener filtro— y recortado por cartera igual que el
+   * resto, por la misma razon.
+   *
+   * El `eliminado_en` viene como `Date` desde el driver, asi que el mapa lo pasa a string una
+   * vez: el componente muestra la fecha del borrado y formatearla ahi cada fila seria
+   * repetir el mismo trabajo.
+   */
+  const eliminadosEn = new Map<number, string | null>()
+  const eliminados: MovimientoEnVista[] = (
+    await listarMovimientosEliminados(db, sesion.usuario_id)
+  )
+    .filter((movimiento) => movimiento.cartera_id === cartera_id)
+    .map((movimiento) => {
+      eliminadosEn.set(
+        movimiento.id,
+        movimiento.eliminado_en ? movimiento.eliminado_en.toISOString() : null,
+      )
+      return aEnVista(movimiento)
+    })
+
+  /**
+   * El filtro de la URL, como lo espera el repositorio.
+   *
+   * Los ids llegan como texto y `''` cuando no hay filtro, y `''` no es un `null`: se pasan
+   * por `aEntero`, que devuelve `null` para lo que no es un entero, y el repositorio trata
+   * `null` como "sin filtro". Es el mismo camino que usa esta pagina para la cartera de la URL.
+   */
+  function filtroDeRepos(datos: ReturnType<typeof validarFiltro>): FiltroMovimientos {
+    return {
+      texto: datos.texto || undefined,
+      cuenta_id: aEntero(datos.cuenta_id),
+      sobre_id: aEntero(datos.sobre_id),
+      tipo: datos.tipo,
+      desde: datos.desde || undefined,
+      hasta: datos.hasta || undefined,
+    }
+  }
+
+  /**
+   * Si hay algo que limpiar del lado de la URL.
+   *
+   * Un filtro **mal escrito** tambien cuenta: la URL tiene un parametro que el usuario puso y
+   * que no se puede aplicar, y el link de limpiar es la unica salida de ahi. Por eso el
+   * `!filtroUrl.valido` va adelante y no se confunde con "no hay filtro".
+   */
+  const hayFiltro =
+    !filtroUrl.valido ||
+    Boolean(
+      filtroUrl.datos.texto ||
+        filtroUrl.datos.cuenta_id ||
+        filtroUrl.datos.sobre_id ||
+        filtroUrl.datos.tipo ||
+        filtroUrl.datos.desde ||
+        filtroUrl.datos.hasta,
+    )
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-10">
@@ -289,10 +477,10 @@ export default async function PaginaCuentas({
                 orden={grupo.orden}
               />
               {/**
-                El total vive en el `<summary>` y no en la lista desplegada: R35 pide
+                El total vive en un `<p>` hermano y no en la lista desplegada: R35 pide
                 que al plegar un grupo se oculten sus sobres pero que el total siga a la
-                vista. Un `<details>` sin `open` inicial cumple las dos cosas sin estado en
-                React.
+                vista. Por eso el `<details>` lleva `open` inicial y el total queda fuera:
+                plegado se ven la cifra y el resumen, no los sobres.
               */}
               <p className="mt-2 ml-4 text-sm text-slate-500">
                 Total del grupo:{' '}
@@ -324,6 +512,7 @@ export default async function PaginaCuentas({
                       .filter((otro) => otro.id !== sobre.id)
                       .map((otro) => ({ id: otro.id, nombre: otro.nombre }))}
                     dinero_suelto={avisos.get(sobre.id)?.cubre ? resumen.dinero_suelto : ''}
+                    asignaciones={asignacionesPorSobre.get(sobre.id) ?? []}
                   />
                 ))}
                 {delGrupo.length === 0 ? (
@@ -479,6 +668,56 @@ export default async function PaginaCuentas({
         </p>
         <FormularioNuevaCuenta cartera_id={cartera.id} />
       </section>
+
+      <h2 className="mt-10 text-sm font-semibold tracking-wide text-slate-500 uppercase">
+        Movimientos
+      </h2>
+      <p className="mt-1 text-sm text-slate-500">
+        El saldo de cada cuenta sale de su saldo inicial mas estos movimientos. Un movimiento sin
+        sobre queda pendiente: su dinero esta en la cuenta y todavia no tiene destino.
+      </p>
+      {activas.length > 0 ? (
+        <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h3 className="text-lg font-semibold text-slate-900">Nuevo movimiento</h3>
+          <p className="mt-1 mb-5 text-sm text-slate-500">
+            Una devolucion es un ingreso con sobre: el sobre recupera lo gastado.
+          </p>
+          <FormularioNuevoMovimiento
+            cartera_id={cartera.id}
+            cuentas={activas.map((cuenta) => ({ id: cuenta.id, nombre: cuenta.nombre }))}
+            sobres={sobres.map((sobre) => ({ id: sobre.id, nombre: sobre.nombre }))}
+            periodo={periodo}
+          />
+        </section>
+      ) : null}
+
+      <div className="mt-8">
+        <ListaMovimientos
+          cartera_id={cartera.id}
+          movimientos={movimientos}
+          cuentas={activas.map((cuenta) => ({ id: cuenta.id, nombre: cuenta.nombre }))}
+          sobres={sobres.map((sobre) => ({ id: sobre.id, nombre: sobre.nombre }))}
+          moneda={cartera.moneda}
+          periodo={periodo}
+          filtro={{
+            texto: filtroUrl.datos.texto,
+            cuenta_id: filtroUrl.datos.cuenta_id,
+            sobre_id: filtroUrl.datos.sobre_id,
+            tipo: filtroUrl.datos.tipo ?? '',
+            desde: filtroUrl.datos.desde,
+            hasta: filtroUrl.datos.hasta,
+          }}
+          hayFiltro={hayFiltro}
+          filtroInvalido={!filtroUrl.valido}
+        />
+
+        <ListaMovimientosEliminados
+          cartera_id={cartera_id}
+          movimientos={eliminados}
+          moneda={cartera.moneda}
+          eliminados_en={eliminadosEn}
+        />
+      </div>
     </main>
   )
 }

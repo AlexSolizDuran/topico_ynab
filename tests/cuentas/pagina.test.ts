@@ -68,7 +68,17 @@ afterEach(async () => {
   await base.cerrar()
 })
 
-const paramsDe = (cartera: string) => ({ params: Promise.resolve({ cartera }) })
+/**
+ * Los props que Next le pasa a la pagina.
+ *
+ * `searchParams` va aunque aca no se mire nada: la pagina lo espera siempre, y una prueba que
+ * lo omite estaria probando una invocacion que Next nunca hace. Sale de R9 —los filtros de
+ * movimientos viven en la URL— y por eso la pagina los lee de ahi.
+ */
+const paramsDe = (cartera: string) => ({
+  params: Promise.resolve({ cartera }),
+  searchParams: Promise.resolve({}),
+})
 
 describe('la pagina de cuentas', () => {
   it('deja ver la cartera propia', async () => {

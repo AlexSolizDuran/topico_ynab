@@ -7,7 +7,12 @@ const MODULO_VACIO = fileURLToPath(new URL('./tests/helpers/vacio.ts', import.me
 export default defineConfig({
   test: {
     environment: 'node',
-    include: ['tests/**/*.test.ts'],
+    /**
+     * Los dos patrones, y no solo `.ts`: una prueba de vista se escribe en JSX, igual que
+     * el componente que dibuja. Escribirla con `createElement` solo para poder dejarla en
+     * `.ts` hace la prueba mas dificil de leer que lo que verifica.
+     */
+    include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
     exclude: ['node_modules/**'],
     testTimeout: 30_000,
     hookTimeout: 60_000,

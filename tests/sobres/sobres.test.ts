@@ -316,6 +316,26 @@ describe('sobres: crear, renombrar y reordenar', () => {
     expect(el.grupo_id).toBe(otroGrupo)
     expect(el.disponible).toBe('2500.00')
   })
+
+  it('reubica un sobre con movimientos y conserva historial y asignaciones', async () => {
+    // El grupo es de presentacion: cambiarlo no puede reescribir ni una fila de dinero.
+    // El disponible bajaria si el movimiento se perdiera, pero que se lose no es lo que
+    // se prueba: se mira que la fila siga ahi.
+    const id = await sobre('Comida')
+    await asignar(id, '2500.00')
+    await gasto(id, '200.00', '2026-01-10')
+    const otroGrupo = await crearGrupo(base.db, cartera, { nombre: 'Variables' })
+
+    await moverSobreDeGrupo(base.db, usuario, cartera, id, otroGrupo)
+
+    const el = await buscarSobre(base.db, usuario, cartera, id, ENERO)
+    expect(el.grupo_id).toBe(otroGrupo)
+    expect(el.disponible).toBe('2300.00')
+    expect((await listarAsignaciones(base.db, usuario, cartera, id)).map((a) => a.monto)).toEqual([
+      '2500.00',
+    ])
+    expect(await cuentaDeMovimientos(id)).toBe(1)
+  })
 })
 
 describe('sobres: el disponible se deriva', () => {
@@ -884,4 +904,15 @@ async function sumaDeDisponibles(periodo = ENERO): Promise<string> {
   const { sql } = await import('drizzle-orm')
   const { resumenDeCartera } = await import('@/repos/dinero-suelto')
   return (await resumenDeCartera(base.db, usuario, cartera, periodo)).asignado
+}
+
+/** Cuantos movimientos tiene colgados un sobre, para probar que el historial sigue. */
+async function cuentaDeMovimientos(sobre_id: number): Promise<number> {
+  const { sql } = await import('drizzle-orm')
+  const { filas } = await import('@/repos/filas')
+  const [fila] = await filas<{ total: number }>(
+    base.db,
+    sql`select count(*)::int as total from movimientos where sobre_id = ${sobre_id}`,
+  )
+  return fila?.total ?? -1
 }

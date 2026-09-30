@@ -138,12 +138,12 @@ segunda usuario, no al leer el codigo.
 
 ## Risks / Trade-offs
 
-- **Comentario falso en `src/repos/dinero-suelto.ts:133`** → Dice que un `SQL` de
-  Drizzle no se puede interpolar dos veces y que por eso `dinero_suelto` salia con el
-  doble. Es falso: los `SQL` son inmutables y reutilizables, y el `-14000.00` que se
-  persiguio era una expectativa mal calculada en la prueba. El refactor a funciones se
-  quedo porque mejora la legibilidad, pero el comentario le echa la culpa a la
-  libreria por un error propio y hay que corregirlo.
+- ~~**Comentario falso en `src/repos/dinero-suelto.ts:133`**~~ → **Corregido.** Decia que un
+  `SQL` de Drizzle no se puede interpolar dos veces y que por eso `dinero_suelto` salia
+  con el doble. Es falso: los `SQL` son inmutables y reutilizables, y el `-14000.00` que
+  se persiguio era una expectativa mal calculada en la prueba. El refactor a funciones se
+  quedo porque mejora la legibilidad, y el comentario ahora lo dice asi en vez de
+  echarle la culpa a la libreria.
 - **El disponible se recalcula por fila** → El listado hace una subconsulta por
   sobre. Con decenas de sobres es barato; con cientos, habria que medir. Aceptado en el
   MVP, sin medida que lo respalde.
