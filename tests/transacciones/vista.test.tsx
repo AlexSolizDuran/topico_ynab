@@ -14,8 +14,10 @@ import type { ReactElement } from 'react'
  *    aparece cuando no corresponde. Un aviso que sale siempre termina siendo ruido, y el ruido
  *    es la forma mas comun de que un aviso deje de leerse.
  * 2. Lo pendiente se marca como "sin asignar" y ofrece la accion de asignarle un sobre.
- * 3. Una pata de traspaso no ofrece ni edicion ni asignacion, y los eliminados solo ofrecen
- *    restaurar.
+ * 3. Una pata de traspaso se corrige con el formulario de traspasos —no con el de un
+ *    movimiento suelto— y no ofrece asignar sobre. El aviso de que la correccion mueve las dos
+ *    patas vive en `tests/traspasos/vista.test.tsx`; aca solo se comprueba que el formulario
+ *    que se abre es el correcto.
  *
  * Las Server Actions van mockeadas porque el render estatico **nunca** las invoca: lo que se
  * esta probando es el HTML de salida, no la escritura. Lo que las acciones hacen esta cubierto
@@ -30,13 +32,13 @@ vi.mock('@/transacciones/acciones', () => ({
 }))
 
 const {
-  AvisoRetroactivo,
   FilaMovimiento,
   FilaMovimientoEliminada,
   FormularioNuevoMovimiento,
   ListaMovimientos,
   ListaMovimientosEliminados,
 } = await import('@/components/transacciones')
+const { AvisoRetroactivo } = await import('@/components/sesion')
 type MovimientoEnVista = import('@/components/transacciones').MovimientoEnVista
 
 const { formatear } = await import('@/dinero')
@@ -68,6 +70,8 @@ function fila(extra: Partial<MovimientoEnVista> = {}): MovimientoEnVista {
     comercio: null,
     pendiente: false,
     pata: false,
+    contraparte_cuenta_id: null,
+    contraparte_cuenta_nombre: null,
     ...extra,
   }
 }
@@ -178,9 +182,17 @@ describe('060: la fila segun su estado', () => {
     expect(marcado).not.toContain('Quitar sobre')
   })
 
-  it('una pata no se edita, no se asigna, y su boton dice que se van las dos', () => {
-    // R6: borrar una pata borra las dos. El boton lo dice, y lo que no existe para una pata
-    // es la edicion y la asignacion, porque el repositorio las rechaza.
+  it('una pata no se asigna, se corrige en espejo, y su boton dice que se van las dos', () => {
+    // R6: borrar una pata borra las dos, y el boton lo dice.
+    //
+    // La edicion **si** existe, y cambio con `070` D5: antes `editarMovimiento` rechazaba una
+    // pata con `PataDeTraspaso` y por eso la fila no offertaba "Corregir". Ahora la pata se
+    // corrige escribiendo el grupo entero, asi que el `<details>` abre el formulario de
+    // traspasos y no el de un movimiento suelto.
+    //
+    // Lo que sigue sin existir para una pata es la **asignacion** de sobre: el repositorio la
+    // rechaza con `TraspasoNoAsignable`, asi que el boton no puede llevar a un error que el
+    // formulario no podia prever.
     const marcado = filaHTML(
       fila({
         sobre_id: null,
@@ -194,10 +206,45 @@ describe('060: la fila segun su estado', () => {
 
     expect(marcado).toContain('pata de un traspaso')
     expect(marcado).toContain('Borrar las dos patas')
-    expect(marcado).not.toContain('Corregir')
+    expect(marcado).toContain('Corregir el traspaso')
     expect(marcado).not.toContain('Asignar sobre')
     // Y tampoco queda como pendiente: el dinero de un traspaso no esta esperando destino.
     expect(marcado).not.toContain('sin asignar')
+  })
+
+  it('una pata con contraparte se lee de donde a donde', () => {
+    // R4: el historial distingue el traspaso de un gasto o un ingreso cualquiera. Con dos
+    // cuentas el recorrido muestra el par; con una sola pata, que falta la contraparte —y eso
+    // es informacion, no un dato vacio.
+    const conContraparte = filaHTML(
+      fila({
+        sobre_id: null,
+        sobre_nombre: null,
+        tipo: 'traspaso',
+        pata: true,
+        pendiente: false,
+        cuenta_nombre: 'Banco',
+        contraparte_cuenta_id: 2,
+        contraparte_cuenta_nombre: 'Efectivo',
+      }),
+    )
+
+    expect(conContraparte).toContain('De Banco a Efectivo')
+
+    const sinContraparte = filaHTML(
+      fila({
+        sobre_id: null,
+        sobre_nombre: null,
+        tipo: 'traspaso',
+        pata: true,
+        pendiente: false,
+        cuenta_nombre: 'Banco',
+        contraparte_cuenta_id: null,
+        contraparte_cuenta_nombre: null,
+      }),
+    )
+
+    expect(sinContraparte).toContain('De Banco, sin contraparte')
   })
 
   it('el importe va formateado y el sobre en el pie', () => {

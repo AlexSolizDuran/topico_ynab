@@ -29,13 +29,21 @@ import {
   type ResultadoDeMovimiento,
 } from '../transacciones/acciones'
 import { formatear, paraCampo } from '../dinero'
-import { Aviso, Boton, Campo } from './sesion'
+import {
+  FilaEditarTraspaso,
+  RecorridoDeTraspaso,
+} from './traspasos'
+import {
+  Aviso,
+  AvisoRetroactivo,
+  Boton,
+  Campo,
+  type OpcionVista,
+  Selector,
+} from './sesion'
 
 /** Una cuenta o un sobre, tal como los elige el usuario. */
-export interface OpcionVista {
-  id: number
-  nombre: string
-}
+export type { OpcionVista }
 
 /** Un movimiento con lo que la fila necesita. Viene del repositorio, ya derivado. */
 export interface MovimientoEnVista {
@@ -55,6 +63,15 @@ export interface MovimientoEnVista {
   pendiente: boolean
   /** `true` si es una de las dos patas de un traspaso. */
   pata: boolean
+  /**
+   * La otra pata del grupo, si la hay. Viene del repositorio.
+   *
+   * `null` en los dos casos que la pantalla trata igual: que no sea un traspaso, o que lo sea
+   * con una sola pata. El `id` es lo que el formulario de edicion necesita para dejar el
+   * destino ya elegido; el `nombre` es lo que hace legible la fila sin abrirla.
+   */
+  contraparte_cuenta_id: number | null
+  contraparte_cuenta_nombre: string | null
 }
 
 /**
@@ -89,72 +106,6 @@ const ETIQUETA_TIPO: Record<MovimientoEnVista['tipo'], string> = {
 function AccionPendiente({ children }: { children: React.ReactNode }) {
   const { pending } = useFormStatus()
   return <Boton pendiente={pending}>{children}</Boton>
-}
-
-function Selector({
-  opciones,
-  nombre,
-  etiqueta,
-  seleccionado,
-  vacio,
-  error,
-}: {
-  opciones: ReadonlyArray<OpcionVista>
-  nombre: string
-  etiqueta: string
-  seleccionado?: string
-  /** La opcion vacia. Sin ella el selector no puede quedar sin valor. */
-  vacio?: string
-  error?: string
-}) {
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-sm font-medium text-slate-700">{etiqueta}</span>
-      <select
-        name={nombre}
-        defaultValue={seleccionado ?? ''}
-        className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
-      >
-        {vacio !== undefined ? <option value="">{vacio}</option> : null}
-        {opciones.map((opcion) => (
-          <option key={opcion.id} value={opcion.id}>
-            {opcion.nombre}
-          </option>
-        ))}
-      </select>
-      {error ? <span className="text-xs text-red-700">{error}</span> : null}
-    </label>
-  )
-}
-
-/**
- * El aviso retroactivo de R7.
- *
- * Sale cuando el periodo de la fecha del movimiento es **anterior** al que se esta
- * mirando. La comparacion es entre strings `AAAA-MM`, que en ese formato ordenan igual que
- * las fechas: no hace falta parsear, y `periodo` no es un numero.
- *
- * La comparacion es `<` y no `!==`: un movimiento del mes actual, o de uno posterior —que
- * el usuario puede registrar, porque los meses futuros no son una operacion que R1
- * prohiba aca— no recalcula un derivado anterior, asi que no hay nada que avisar. Solo el
- * `<` avisa.
- */
-export function AvisoRetroactivo({
-  periodoAfectado,
-  periodoActual,
-}: {
-  periodoAfectado?: string
-  periodoActual: string
-}) {
-  if (!periodoAfectado || periodoAfectado >= periodoActual) return null
-
-  return (
-    <Aviso tono="exito">
-      El movimiento entró en {periodoAfectado}. Ese mes y los siguientes cambian sus
-      derivados: el disponible del sobre y el dinero suelto ya están recalculados para{' '}
-      {periodoAfectado}, y para los meses posteriores también.
-    </Aviso>
-  )
 }
 
 /**
@@ -417,7 +368,13 @@ export function FilaMovimiento({
             ) : null}
           </p>
           <p className="text-xs text-slate-500">
-            {movimiento.fecha} · {movimiento.cuenta_nombre}
+            {movimiento.fecha} ·{' '}
+            {/*
+              Un traspaso se lee de donde a donde. Para el resto el recorrido devuelve `null` y
+              queda solo el nombre de la cuenta, que es lo de siempre.
+            */}
+            <RecorridoDeTraspaso movimiento={movimiento} />
+            {movimiento.tipo === 'traspaso' ? null : movimiento.cuenta_nombre}
             {movimiento.sobre_nombre ? ` · ${movimiento.sobre_nombre}` : ''}
           </p>
         </div>
@@ -456,11 +413,25 @@ export function FilaMovimiento({
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        {!movimiento.pata ? (
-          <details open={abierta} className="flex-1">
-            <summary className="cursor-pointer text-sm text-slate-500 hover:text-slate-900">
-              Corregir
-            </summary>
+        {/*
+          Las dos ramas van al mismo `<details>` con el mismo `<summary>` y cambian **solo** el
+          formulario de adentro. Antes de `070` D5 no habia rama de pata: una pata no se
+          corregia, porque `editarMovimiento` la rechazaba. Ahora se corrige en espejo, asi que
+          el formulario es el de traspasos, y por eso el aviso de que se mueven las dos patas va
+          ahi y no en un `onClick` de este boton.
+        */}
+        <details open={abierta} className="flex-1">
+          <summary className="cursor-pointer text-sm text-slate-500 hover:text-slate-900">
+            {movimiento.pata ? 'Corregir el traspaso' : 'Corregir'}
+          </summary>
+          {movimiento.pata ? (
+            <FilaEditarTraspaso
+              cartera_id={cartera_id}
+              movimiento={movimiento}
+              cuentas={cuentas}
+              periodo={periodo}
+            />
+          ) : (
             <FilaEditarMovimiento
               cartera_id={cartera_id}
               movimiento={movimiento}
@@ -468,8 +439,8 @@ export function FilaMovimiento({
               sobres={sobres}
               periodo={periodo}
             />
-          </details>
-        ) : null}
+          )}
+        </details>
 
         {estadoBorrar.error || estadoAsignar.error ? (
           <p role="alert" className="text-xs text-red-700">

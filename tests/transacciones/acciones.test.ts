@@ -306,8 +306,11 @@ describe('transacciones: cada error de dominio llega a la pantalla con su mensaj
       correr: () => accionRegistrarMovimiento(cartera, INICIAL, datos(alta({ tipo: 'traspaso' }))),
     },
     {
-      nombre: 'editar una pata de traspaso',
-      mensaje: 'Este movimiento es una pata de un traspaso: no se puede editar por separado.',
+      // Antes de `070` esto pedia la pata por separado. D5 cambio eso: la pata se edita en
+      // espejo. Lo que **si** sigue siendo imposible es mandarle un sobre, asi que el error
+      // que llega a la pantalla es el de "un traspaso no se asigna".
+      nombre: 'editar una pata de traspaso mandandole un sobre',
+      mensaje: 'Un traspaso no se asigna a un sobre.',
       correr: () => accionEditarMovimiento(cartera, pata, INICIAL, datos(alta())),
     },
     {

@@ -35,13 +35,14 @@ import {
   ListaMovimientosEliminados,
   type MovimientoEnVista,
 } from '@/components/transacciones'
+import { FormularioNuevoTraspaso } from '@/components/traspasos'
 
 /**
  * El mes que se mira.
  *
  * La pantalla es de un solo periodo y no tiene selector: los meses futuros y la
  * navegacion entre periodos quedan fuera de alcance. Se calcula en el servidor, una
- * vez, y se pasa a todos los repositorios â€”disponibles, resumen y avisosâ€” para que las
+ * vez, y se pasa a todos los repositorios —disponibles, resumen y avisos— para que las
  * cifras de la pagina hablen todas del mismo mes. Cada repositorio recalcularlo por su
  * cuenta abriria la puerta a que el disponible de una tabla sea de junio y el dinero
  * suelto de julio.
@@ -70,8 +71,8 @@ function filtroDeUrl(
     cuenta_id: primero(searchParams.cuenta_id),
     sobre_id: primero(searchParams.sobre_id),
     // El `<select>` de tipo manda `''` en su opcion vacia, y `''` **no** es un `tipo`
-    // valido: `z.enum` solo acepta las tres etiquetas. Sin esta conversion, `tipo=''` â€”o sea,
-    // toda URL sin filtroâ€” haria fallar `validarFiltro` y la pagina caeria al caso de "filtro
+    // valido: `z.enum` solo acepta las tres etiquetas. Sin esta conversion, `tipo=''` —o sea,
+    // toda URL sin filtro— haria fallar `validarFiltro` y la pagina caeria al caso de "filtro
     // mal escrito" siempre. Lo que significa "no filtrar por tipo" es la **ausencia** de la
     // clave, no una cadena vacia.
     tipo: primero(searchParams.tipo) || undefined,
@@ -292,6 +293,8 @@ export default async function PaginaCuentas({
       comercio: movimiento.comercio,
       pendiente: movimiento.pendiente,
       pata: movimiento.transferencia_id !== null,
+      contraparte_cuenta_id: movimiento.contraparte_cuenta_id,
+      contraparte_cuenta_nombre: movimiento.contraparte_cuenta_nombre,
     }
   }
 
@@ -303,8 +306,8 @@ export default async function PaginaCuentas({
    * Los eliminados de esta cartera, para poder restaurar.
    *
    * Sin esto, R6 seria solo la mitad de lo que dice: la fila se conserva, pero no hay de
-   * donde volver a tomarla. Sin filtros a proposito â€”un filtro que oculta el unico movimiento
-   * que se puede deshacer es peor que no tener filtroâ€” y recortado por cartera igual que el
+   * donde volver a tomarla. Sin filtros a proposito —un filtro que oculta el unico movimiento
+   * que se puede deshacer es peor que no tener filtro— y recortado por cartera igual que el
    * resto, por la misma razon.
    *
    * El `eliminado_en` viene como `Date` desde el driver, asi que el mapa lo pasa a string una
@@ -677,18 +680,45 @@ export default async function PaginaCuentas({
         sobre queda pendiente: su dinero esta en la cuenta y todavia no tiene destino.
       </p>
       {activas.length > 0 ? (
-        <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h3 className="text-lg font-semibold text-slate-900">Nuevo movimiento</h3>
-          <p className="mt-1 mb-5 text-sm text-slate-500">
-            Una devolucion es un ingreso con sobre: el sobre recupera lo gastado.
-          </p>
-          <FormularioNuevoMovimiento
-            cartera_id={cartera.id}
-            cuentas={activas.map((cuenta) => ({ id: cuenta.id, nombre: cuenta.nombre }))}
-            sobres={sobres.map((sobre) => ({ id: sobre.id, nombre: sobre.nombre }))}
-            periodo={periodo}
-          />
-        </section>
+        <>
+          <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h3 className="text-lg font-semibold text-slate-900">Nuevo movimiento</h3>
+            <p className="mt-1 mb-5 text-sm text-slate-500">
+              Una devolucion es un ingreso con sobre: el sobre recupera lo gastado.
+            </p>
+            <FormularioNuevoMovimiento
+              cartera_id={cartera.id}
+              cuentas={activas.map((cuenta) => ({ id: cuenta.id, nombre: cuenta.nombre }))}
+              sobres={sobres.map((sobre) => ({ id: sobre.id, nombre: sobre.nombre }))}
+              periodo={periodo}
+            />
+          </section>
+
+          {/*
+            Los traspasos van en su propia seccion y no como un tipo mas del formulario de
+            arriba, por dos razones que son de R2. Una: un traspaso no puede llevar sobre, y el
+            formulario de movimiento no tiene forma de no ofrecerlo. Dos: el alta de traspaso
+            pide **dos** cuentas, y ese par no cabe en el select de cuenta unica.
+
+            Solo sale con dos o mas cuentas activas: con una sola no hay traspaso posible, y
+            R1 prohibe el alta vacia. No es un caso raro, es el estado de una cartera recien
+            creada.
+          */}
+          {activas.length > 1 ? (
+            <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h3 className="text-lg font-semibold text-slate-900">Nuevo traspaso</h3>
+              <p className="mt-1 mb-5 text-sm text-slate-500">
+                Mueve dinero entre dos cuentas de esta cartera sin tocar ningun sobre. No puede
+                cruzar carteras: cada una tiene su moneda y no hay conversion.
+              </p>
+              <FormularioNuevoTraspaso
+                cartera_id={cartera.id}
+                cuentas={activas.map((cuenta) => ({ id: cuenta.id, nombre: cuenta.nombre }))}
+                periodo={periodo}
+              />
+            </section>
+          ) : null}
+        </>
       ) : null}
 
       <div className="mt-8">

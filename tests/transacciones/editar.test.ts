@@ -25,7 +25,6 @@ import {
 import {
   MovimientoEliminado,
   MovimientoNoExiste,
-  PataDeTraspaso,
   SobreDeOtraCartera,
   buscarMovimiento,
   editarMovimiento,
@@ -350,10 +349,17 @@ describe('060: editar la fecha mueve el disponible entre periodos', () => {
   })
 })
 
-describe('060: una pata de traspaso no se edita', () => {
-  it('rechaza editar una pata y deja el grupo intacto', async () => {
-    // D6. Editar una sola pata desempareja el grupo: dejaria un traspaso de 500 cuyo par
-    // es de 450, y el patrimonio dejaria de cuadrar. El error lo dice explicito.
+describe('060: una pata de traspaso no se edita desde el camino de `060`', () => {
+  /**
+   * Antes de `070`, `060` rechazaba editar una pata con `PataDeTraspaso`, y estas pruebas
+   * fijaban ese rechazo. `070` D5 lo **cambia**: la pata se edita en espejo, reescribiendo el
+   * grupo entero.
+   *
+   * La cobertura del comportamiento nuevo esta en `tests/traspasos/edicion.test.ts`. Acá solo
+   * queda comprobar que la edicion de una pata ya **no** se rechaza, para que un cambio de
+   * vuelta a `PataDeTraspaso` caiga en el lugar de siempre y no pase inadvertido.
+   */
+  it('no rechaza editar una pata: el espejo es responsabilidad de `070`', async () => {
     const origen = await crearCuenta(base.db, cartera, { nombre: nombreCuenta(), saldo_inicial: '0.00' })
     const destino = await crearCuenta(base.db, cartera, { nombre: nombreCuenta(), saldo_inicial: '0.00' })
     const { origen_id, destino_id } = await crearTransferencia(base.db, {
@@ -362,34 +368,11 @@ describe('060: una pata de traspaso no se edita', () => {
       monto: '500.00',
     })
 
-    await expect(
-      editarMovimiento(base.db, usuario, origen_id, { monto: '450' }),
-    ).rejects.toBeInstanceOf(PataDeTraspaso)
+    const editado = await editarMovimiento(base.db, usuario, origen_id, { monto: '450' })
 
-    // Las dos patas siguen intactas y emparejadas.
-    expect((await buscarMovimiento(base.db, usuario, origen_id))?.monto).toBe('-500.00')
-    expect((await buscarMovimiento(base.db, usuario, destino_id))?.monto).toBe('500.00')
-  })
-
-  it('tampoco se puede cambiar la cuenta, la fecha ni el texto de una pata', async () => {
-    const origen = await crearCuenta(base.db, cartera, { nombre: nombreCuenta(), saldo_inicial: '0.00' })
-    const destino = await crearCuenta(base.db, cartera, { nombre: nombreCuenta(), saldo_inicial: '0.00' })
-    const { origen_id } = await crearTransferencia(base.db, {
-      origen_cuenta_id: origen,
-      destino_cuenta_id: destino,
-      monto: '500.00',
-    })
-
-    // El rechazo no mira que campo se esta tocando: una pata no se edita, punto.
-    await expect(
-      editarMovimiento(base.db, usuario, origen_id, { cuenta_id: otra }),
-    ).rejects.toBeInstanceOf(PataDeTraspaso)
-    await expect(
-      editarMovimiento(base.db, usuario, origen_id, { fecha: '2026-01-02' }),
-    ).rejects.toBeInstanceOf(PataDeTraspaso)
-    await expect(
-      editarMovimiento(base.db, usuario, origen_id, { descripcion: 'Otro' }),
-    ).rejects.toBeInstanceOf(PataDeTraspaso)
+    // Las dos patas cambieron juntas y con el signo dado la vuelta.
+    expect(editado.monto).toBe('-450.00')
+    expect((await buscarMovimiento(base.db, usuario, destino_id))?.monto).toBe('450.00')
   })
 })
 

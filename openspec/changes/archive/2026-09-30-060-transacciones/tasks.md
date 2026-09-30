@@ -85,7 +85,7 @@ lo que el grupo acaba de escribir. El grupo 11 es el unico de integracion.
 
 ## 11. Verificacion
 
-- [ ] 11.1 `npx tsc --noEmit` sin errores
-- [ ] 11.2 `npx vitest run` verde, con las suites de `cuentas`, `sobres` y `grupos` sin regresiones
-- [ ] 11.3 `npm run build` completa
-- [ ] 11.4 `openspec validate --specs --strict` pasa con las 12 capacidades, y `openspec validate 060-transacciones --strict` da `valid`. Con `skip_specs: true` no hay deltas que revisar
+- [x] 11.1 `npx tsc --noEmit` sin errores
+- [x] 11.2 `npx vitest run` verde, con las suites de `cuentas`, `sobres` y `grupos` sin regresiones
+- [x] 11.3 `npm run build` completa
+- [x] 11.4 `openspec validate --specs --strict` pasa con las 12 capacidades, y `openspec validate 060-transacciones --strict` da `valid`. Con `skip_specs: true` no hay deltas que revisar

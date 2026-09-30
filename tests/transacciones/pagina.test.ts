@@ -207,8 +207,27 @@ describe('la pagina de la cartera, con movimientos', () => {
 
     expect(marcado).toContain('pata de un traspaso')
     expect(marcado).toContain('Borrar las dos patas')
-    // R6 y el repositorio: una pata no se edita sola. El boton de edicion no aparece.
+    // R6 y el repositorio: una pata no se edita sola. Ahora con 070 D5 la edicion es en
+    // espejo, pero el test no busca "Corregir": busca que no haya asignacion y que el
+    // boton diga que se van las dos. La pagina muestra el formulario de traspasos cuando es
+    // una pata, que ya lo prueba `vista.test.tsx` de traspasos.
     expect(marcado).not.toContain('Asignar sobre')
+  })
+
+  it('la seccion de traspasos sale con dos cuentas y no con una', async () => {
+    // Con una sola cuenta no hay traspaso posible: R1 prohibe el alta vacia, y un formulario
+    // que solo ofrece "Elegi la cuenta" y "Sin contraparte" seria una invitation a un error
+    // forzado.
+    const conUna = await html()
+    expect(conUna).not.toContain('Nuevo traspaso')
+
+    await crearCuenta(base.db, cartera, { nombre: 'Efectivo' })
+
+    const conDos = await html()
+    expect(conDos).toContain('Nuevo traspaso')
+    // Y el texto dice lo que R1 prohibe, antes de que el usuario intente: no hay conversion
+    // entre carteras, asi que cada una se mueve por separado.
+    expect(conDos).toContain('No puede cruzar carteras')
   })
 })
 

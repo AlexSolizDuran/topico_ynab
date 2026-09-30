@@ -6,7 +6,7 @@ Definir el movimiento de dinero entre cuentas propias como una operacion que no 
 ## Requirements
 
 ### Requirement: El usuario transfiere dinero entre sus propias cuentas
-El sistema SHALL permitir al usuario mover un importe desde una cuenta a otra de la misma cartera, indicando importe, fecha y descripcion. El sistema SHALL registrar el traspaso como un grupo que empareja las dos patas, una por cada cuenta involucrada, con importes de signo opuesto. El sistema SHALL permitir registrar un traspaso con una sola pata, y en ese caso SHALL avisar al usuario de que no tiene contraparte.
+El sistema SHALL permitir al usuario mover un importe desde una cuenta a otra de la misma cartera, indicando importe, fecha y descripcion. El sistema SHALL registrar el traspaso como un grupo que empareja las dos patas, una por cada cuenta involucrada, con importes de signo opuesto. El sistema SHALL permitir registrar un traspaso con una sola pata, y en ese caso SHALL avisar al usuario de que no tiene contraparte y de que esa pata mueve el dinero suelto y el patrimonio por el importe completo, porque no hay pata opuesta que lo compense.
 
 #### Scenario: Traspaso entre dos cuentas
 - **WHEN** el usuario mueve 5,000 de una cuenta corriente a una de ahorro
@@ -14,7 +14,7 @@ El sistema SHALL permitir al usuario mover un importe desde una cuenta a otra de
 
 #### Scenario: Traspaso con una sola pata
 - **WHEN** el usuario registra un traspaso con una sola pata
-- **THEN** el sistema lo registra y advierte que esa pata no tiene contraparte, sin bloquear la operacion
+- **THEN** el sistema lo registra y advierte que esa pata no tiene contraparte y que por eso el dinero suelto y el patrimonio se mueven por el importe completo, sin bloquear la operacion
 
 #### Scenario: Traspaso entre cuentas de carteras distintas
 - **WHEN** el usuario intenta mover dinero entre cuentas que pertenecen a carteras distintas
@@ -47,16 +47,20 @@ El sistema SHALL excluir los traspasos del calculo del disponible de los sobres,
 
 ---
 
-### Requirement: Un traspaso no altera el dinero suelto ni el patrimonio
-El sistema SHALL incluir los traspasos en el calculo del saldo de las cuentas y SHALL excluirlos del calculo del disponible de los sobres. Como el dinero suelto es la diferencia entre ambas sumas, un traspaso SHALL NOT alterar el dinero suelto de la cartera. El sistema SHALL garantizar que un traspaso no modifica el patrimonio neto de la cartera.
+### Requirement: Un traspaso emparejado no altera el dinero suelto ni el patrimonio
+El sistema SHALL incluir los traspasos en el calculo del saldo de las cuentas y SHALL excluirlos del calculo del disponible de los sobres. Un traspaso con sus dos patas emparejadas mueve la suma de los saldos en cero, porque las dos patas tienen importes de signo opuesto, y no mueve la suma de los disponibles, porque un traspaso no se asigna a ningun sobre. El sistema SHALL garantizar que un traspaso emparejado no modifica ni el dinero suelto ni el patrimonio neto de la cartera. Un traspaso de una sola pata no esta emparejado, y si mueve ambas cantidades en el importe de esa pata.
 
 #### Scenario: El dinero suelto no cambia
 - **WHEN** el usuario registra un traspaso entre dos cuentas de la misma cartera
 - **THEN** el dinero suelto de la cartera permanece sin cambios
 
 #### Scenario: El patrimonio no cambia
-- **WHEN** el usuario registra un traspaso por cualquier importe
+- **WHEN** el usuario registra un traspaso con sus dos patas, por cualquier importe
 - **THEN** el patrimonio neto de la cartera es identico antes y despues
+
+#### Scenario: Una pata sola si mueve el dinero suelto
+- **WHEN** el usuario registra un traspaso de una sola pata por 500
+- **THEN** el dinero suelto y el patrimonio de la cartera se mueven en 500, porque no hay pata opuesta que compense, y el sistema ya habia avisado de que la pata no tiene contraparte
 
 #### Scenario: Transferir dinero de una cuenta a un sobre
 - **WHEN** el usuario quiere pasar dinero de su cuenta corriente a un sobre
@@ -65,15 +69,11 @@ El sistema SHALL incluir los traspasos en el calculo del saldo de las cuentas y 
 ---
 
 ### Requirement: Pagar el adeudo de una tarjeta es un traspaso
-El sistema SHALL tratar el pago del adeudo de una cuenta de credito como un traspaso desde la cuenta de origen hacia la cuenta de credito, y SHALL NOT requerir que el usuario asigne ese importe a ningun sobre. El sistema SHALL informar al usuario cuando un traspaso reduce la deuda de una cuenta de credito, y SHALL decrementar el dinero suelto de la cartera en la magnitud de la deuda que salda.
+El sistema SHALL tratar el pago del adeudo de una cuenta de credito como un traspaso desde la cuenta de origen hacia la cuenta de credito, y SHALL NOT requerir que el usuario asigne ese importe a ningun sobre. El sistema SHALL informar al usuario cuando un traspaso reduce la deuda de una cuenta de credito. El pago de un adeudo es un traspaso emparejado, y por eso no altera el dinero suelto ni el patrimonio: la pata que suma a la cuenta de credito compensa exactamente a la que resta de la cuenta de origen.
 
 #### Scenario: Pago de tarjeta sin sobre
 - **WHEN** el usuario paga 600 a una cuenta de credito que debia 600
 - **THEN** el sistema registra un traspaso, la deuda queda saldada y no se pide asignar el importe a ningun sobre
-
-#### Scenario: El pago reduce el dinero suelto
-- **WHEN** el usuario salda una deuda de 600 con un traspaso
-- **THEN** el dinero suelto de la cartera disminuye en 600, porque la deuda dejaba de estar cubierta por ese dinero
 
 #### Scenario: Usuario que paga con tarjeta
 - **WHEN** el usuario registra un gasto de 600 en una cuenta de credito
@@ -81,4 +81,4 @@ El sistema SHALL tratar el pago del adeudo de una cuenta de credito como un tras
 
 #### Scenario: Pago parcial de tarjeta
 - **WHEN** el usuario paga 300 a una cuenta de credito que debia 600
-- **THEN** la deuda baja a 300 y el dinero suelto disminuye en 300
+- **THEN** la deuda baja a 300 y no se pide asignar el importe a ningun sobre

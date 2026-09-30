@@ -131,6 +131,24 @@ export function esNegativo(importe: Dinero): boolean {
   return importe.trim().startsWith('-')
 }
 
+/**
+ * El importe sin signo, como `Dinero`.
+ *
+ * Es quitar un `-` de un string, **no** una operacion numerica. La diferencia no es
+ * academica: `Math.abs(Number('1234567890123456.78'))` devuelve `1234567890123456.8`, y ese
+ * `.8` es un centimo perdido que despues aparece como diferencia de saldo. Como `Dinero` es un
+ * string y el signo es un caracter, quitarlo no puede perder precision porque no hay nada que
+ * redondear.
+ *
+ * Existe para el formulario de edicion de traspasos, que muestra el importe **en positivo**:
+ * el usuario escribe la cantidad que viaja, y el signo lo pone el repositorio con `abs` en
+ * SQL segun la pata. Un `-` en el campo seria el signo de la otra cuenta, no el importe.
+ */
+export function absDinero(importe: Dinero): Dinero {
+  const limpio = importe.trim()
+  return esNegativo(limpio) ? limpio.slice(1) : limpio
+}
+
 /** Un importe es cero cuando no tiene signo y todos sus digitos son cero. */
 export function esCero(importe: Dinero): boolean {
   const { entero, decimales } = descomponer(importe)

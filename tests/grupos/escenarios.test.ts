@@ -97,7 +97,7 @@ const DIFERIDOS: Record<string, { change: string; motivo: string }> = {}
  * Se lista la carpeta y no se la adivina: el mapa decide que referencia y el escaner decide
  * donde puede mirar.
  */
-const CARPETAS = ['tests/grupos', 'tests/sobres', 'tests/transacciones']
+const CARPETAS = ['tests/grupos', 'tests/sobres', 'tests/transacciones', 'tests/traspasos']
 
 describe('trazabilidad de grupos', () => {
   it('cubiertos y diferidos cubren los 10 escenarios del spec, sin sobras ni faltas', async () => {

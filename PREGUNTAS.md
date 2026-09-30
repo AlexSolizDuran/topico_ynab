@@ -10,10 +10,12 @@ Ninguna. El conjunto de specs esta completo y se puede implementar.
 
 ## Para confirmar
 
-### 1. ¿Un traspaso entre carteras de distinta moneda, o entre carteras en general?
+### 1. ¿Un traspaso entre carteras de distinta moneda, o entre carteras en general? — CONFIRMADO
 
-**Decision provisional:** el sistema rechaza el traspaso cuando las cuentas
-involucradas pertenecen a carteras distintas, sin importar si comparten moneda.
+**Decision confirmada (2026-09-30):** el sistema rechaza el traspaso cuando las cuentas
+involucradas pertenecen a carteras distintas, **sin importar si comparten moneda**. La
+prohibicion es total: no hay traspaso entre carteras, ni entre carteras de la misma
+moneda.
 
 **Por que esta decision:** la decision del usuario fue "no se puede pasar de una
 cartera a otra, o al menos no pasar de una moneda a otra". El modelo fue
@@ -22,8 +24,10 @@ construido de modo que un movimiento pertenece a una sola cartera, deducida por
 rechazo anadir reglas de integridad cruzada al modelo. Bajo esa estructura, un
 traspaso entre carteras distintas no tiene a que almacenarse en ninguna parte.
 
-**Lo que falta confirmar:** si dos carteras de la MISMA moneda deben poder
-transferirse entre si, o si la prohibition es total.
+Se confirmo al proponer `070-traspasos`, el 2026-09-30, y se eligio la opcion
+conservadora: permitirlo entre carteras de la misma moneda habria obligado a editar
+`carteras` R4, `transacciones` R3 y R5 ademas de `traspasos` R1, y a agregar un
+emparejamiento entre carteras que el modelo no soporta.
 
 **Donde esta documentada:** `carteras` R4, `traspasos` R1, `transacciones` R3 y R5.
 

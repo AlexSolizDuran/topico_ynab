@@ -4,6 +4,12 @@
  * Sin dependencias de cliente: son server components. La unica parte que
  * necesita interactividad es el `useActionState` de cada formulario, y vive en
  * `FormularioSesion`.
+ *
+ * `Selector` y `Campo` estan aca y no en cada componente de capacidad porque los dos son
+ * primitivas de formulario, no de una capacidad: los usan `transacciones` y `traspasos`
+ * igual, y duplicar un desplegable de cincuenta lineas en dos archivos es una copia que
+ * hay que recordar actualizar en los dos lados. El `import type` de cada componente
+ * tambien es lo que evita que esto arrastre el cliente a un server component.
  */
 
 import type { HTMLInputTypeAttribute, ReactNode } from 'react'
@@ -137,6 +143,99 @@ export function Boton({
     >
       {pendiente ? 'Un momento...' : children}
     </button>
+  )
+}
+
+/**
+ * Una opcion de un desplegable de la vista.
+ *
+ * Es `{ id, nombre }` y no la fila de la base: la vista no necesita el saldo de una cuenta
+ * para ponerla en un `<option>`, y mandar la fila entera hacia el cliente seria mandar de mas
+ * lo que el desplegable no muestra.
+ */
+export interface OpcionVista {
+  id: number
+  nombre: string
+}
+
+/**
+ * Desplegable de opciones.
+ *
+ * Es uncontrolled a proposito: `defaultValue`, no `value`. Con `value` React lo trataria
+ * como de solo lectura y el usuario no podria cambiar la cuenta en un formulario que ya
+ * salio con un error.
+ */
+export function Selector({
+  opciones,
+  nombre,
+  etiqueta,
+  seleccionado,
+  vacio,
+  error,
+  requerido = true,
+}: {
+  opciones: ReadonlyArray<OpcionVista>
+  nombre: string
+  etiqueta: string
+  seleccionado?: string
+  /** La opcion vacia. Sin ella el selector no puede quedar sin valor. */
+  vacio?: string
+  error?: string
+  requerido?: boolean
+}) {
+  return (
+    <label className="flex flex-col gap-1.5">
+      <span className="text-sm font-medium text-slate-700">{etiqueta}</span>
+      <select
+        name={nombre}
+        defaultValue={seleccionado ?? ''}
+        required={requerido}
+        className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
+      >
+        {vacio !== undefined ? <option value="">{vacio}</option> : null}
+        {opciones.map((opcion) => (
+          <option key={opcion.id} value={opcion.id}>
+            {opcion.nombre}
+          </option>
+        ))}
+      </select>
+      {error ? <span className="text-xs text-red-700">{error}</span> : null}
+    </label>
+  )
+}
+
+/**
+ * El aviso retroactivo de R7.
+ *
+ * Sale cuando el periodo de la fecha de la operacion es **anterior** al que se esta
+ * mirando. La comparacion es entre strings `AAAA-MM`, que en ese formato ordenan igual que
+ * las fechas: no hace falta parsear, y `periodo` no es un numero.
+ *
+ * La comparacion es `<` y no `!==`: una operacion del mes actual, o de uno posterior —que el
+ * usuario puede registrar, porque los meses futuros no son una operacion que R1 prohiba
+ * aca— no recalcula un derivado anterior, asi que no hay nada que avisar. Solo el `<` avisa.
+ *
+ * Vive aca y no en `transacciones.tsx` porque lo usan `transacciones` y `traspasos` igual. Si
+ * se quedara en el primero, `traspasos` lo importaria de un modulo que a su vez importa el
+ * formulario de edicion de este, y ese ciclo entre dos client components es de los que
+ * funcionan por casualidad. El texto dice "la operacion" y no "el movimiento" por lo mismo:
+ * un traspaso tambien puede caer en un mes anterior.
+ */
+export function AvisoRetroactivo({
+  periodoAfectado,
+  periodoActual,
+}: {
+  periodoAfectado?: string
+  periodoActual: string
+}) {
+  if (!periodoAfectado || periodoAfectado >= periodoActual) return null
+
+  return (
+    <Aviso tono="exito">
+      La operación entró en {periodoAfectado}. Ese mes y los siguientes cambian sus
+      derivados: el disponible del sobre y el dinero suelto ya están recalculados para{' '}
+      {periodoAfectado}, y para los meses posteriores también.
+    </Aviso>
   )
 }
 

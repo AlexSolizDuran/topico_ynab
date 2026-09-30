@@ -19,7 +19,9 @@ import {
   grupos,
   gruposTransferencia,
   movimientos,
+  reglasRecurrentes,
   sesiones,
+  sobres,
   usuarios,
 } from '../../src/db/schema'
 import type { Base } from '../../src/db/tipos'
@@ -229,6 +231,33 @@ export async function crearGrupo(
   return creado.id
 }
 
+export interface OpcionesSobre {
+  nombre?: string
+  archivado?: boolean
+  orden?: number
+}
+
+export async function crearSobre(
+  db: Base,
+  cartera_id: number,
+  grupo_id: number,
+  opciones: OpcionesSobre = {},
+): Promise<number> {
+  const [creado] = await db
+    .insert(sobres)
+    .values({
+      cartera_id,
+      grupo_id,
+      nombre: opciones.nombre ?? unico('Sobre'),
+      archivado: opciones.archivado ?? false,
+      orden: opciones.orden ?? 0,
+    })
+    .returning({ id: sobres.id })
+
+  if (!creado) throw new Error('crearSobre no devolvio id')
+  return creado.id
+}
+
 export interface OpcionesMovimiento {
   cuenta_id: number
   /** Con signo: negativo gasto, positivo ingreso. String, nunca number. */
@@ -289,7 +318,7 @@ export interface OpcionesGrupoTransferencia {
  * Inserta un grupo de traspaso y devuelve su id.
  *
  * En `060` no hay formulario que cree una transferencia, asi que las pruebas que necesitan
- * patas —la cascada de R6, el rechazo de editar una pata— arman el par aca, que es la
+ * patas la cascada de R6, el rechazo de editar una pata arman el par aca, que es la
  * forma en que `070-traspasos` lo va a hacer. Ver D5.
  */
 export async function crearGrupoTransferencia(
@@ -385,5 +414,46 @@ export async function crearAsignacion(
     .returning({ id: asignaciones.id })
 
   if (!creada) throw new Error('crearAsignacion no devolvio id')
+  return creada.id
+}
+
+export interface OpcionesReglaRecurrente {
+  cartera_id: number
+  cuenta_id: number
+  sobre_id?: number | null
+  descripcion?: string
+  monto?: string
+  tipo?: 'gasto' | 'ingreso'
+  frecuencia?: 'diaria' | 'semanal' | 'mensual' | 'anual'
+  dia?: number
+  mes?: number | null
+  fecha_inicio?: string
+  activa?: boolean
+  comercio?: string | null
+}
+
+export async function crearRegla(
+  db: Base,
+  opciones: OpcionesReglaRecurrente,
+): Promise<number> {
+  const [creada] = await db
+    .insert(reglasRecurrentes)
+    .values({
+      cartera_id: opciones.cartera_id,
+      cuenta_id: opciones.cuenta_id,
+      sobre_id: opciones.sobre_id ?? null,
+      descripcion: opciones.descripcion ?? 'Regla recurrente',
+      monto: opciones.monto ?? '1000.00',
+      tipo: opciones.tipo ?? 'gasto',
+      frecuencia: opciones.frecuencia ?? 'mensual',
+      dia: opciones.dia ?? 1,
+      mes: opciones.mes ?? null,
+      fecha_inicio: opciones.fecha_inicio ?? '2026-01-01',
+      activa: opciones.activa ?? true,
+      comercio: opciones.comercio ?? null,
+    })
+    .returning({ id: reglasRecurrentes.id })
+
+  if (!creada) throw new Error('crearRegla no devolvio id')
   return creada.id
 }

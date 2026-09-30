@@ -1,12 +1,14 @@
-import { and, desc, eq, isNotNull, isNull, sql } from 'drizzle-orm'
+import { and, desc, eq, isNotNull, isNull, ne, sql } from 'drizzle-orm'
 import type { Column, SQL } from 'drizzle-orm'
+import { alias } from 'drizzle-orm/pg-core'
 import type { Base } from '../db/tipos'
 import { carteras, cuentas, movimientos, sobres } from '../db/schema'
 import type { Dinero } from '../dinero'
-import { esCero, esNegativo } from '../dinero'
+import { esCero, esNegativo, paraCampo } from '../dinero'
 import { filas } from './filas'
 import { SobreNoExiste } from './sobres'
 import { ImporteInvalido } from './errores-asignaciones'
+import { CuentasDeCarterasDistintas } from './errores-traspasos'
 import { CuentaAjena } from './cuentas'
 import {
   ImporteCero,
@@ -62,6 +64,21 @@ export interface MovimientoVisto {
   comercio: string | null
   origen: 'manual' | 'recurrente'
   transferencia_id: number | null
+  /**
+   * La otra pata del mismo grupo, si la hay.
+   *
+   * Se resuelve con un `leftJoin` de la tabla consigo misma, asi que es `null` en dos casos
+   * distintos: cuando el movimiento no es de un traspaso, y cuando **si** lo es pero el
+   * grupo tiene una sola pata. Los dos son "no hay contraparte" y la pantalla los trata
+   * igual, asi que no hace falta distinguirlos aca; lo que si importa es que no se
+   * invente: la segunda pata se busca por `transferencia_id` excluyendo esta fila.
+   *
+ * Vive en la vista porque el formulario de edicion de una pata necesita el destino para
+ * mostrarlo elegido. Si la vista no lo trajera, el formulario tendria que recibir un mapa
+ * aparte por grupo, que es el mismo dato indexado dos veces.
+   */
+  contraparte_cuenta_id: number | null
+  contraparte_cuenta_nombre: string | null
   eliminado_en: Date | null
   /**
    * Sin sobre: pendiente de asignar (R2).
@@ -72,10 +89,17 @@ export interface MovimientoVisto {
   pendiente: boolean
 }
 
-/** El importe tiene que ser algo que Postgres pueda castear a `numeric`. */
+/**
+ * El importe tiene que ser algo que Postgres pueda castear a `numeric`.
+ *
+ * Exportado para que `traspasos.ts` valide el suyo con **la misma** frontera: el regex y el
+ * rechazo del cero no pueden tener dos copias, porque un traspaso de cero seria un
+ * movimiento que no mueve nada y existe por historial, que es exactamente lo que R1
+ * prohibe para los dos casos. Ver D2.
+ */
 const IMPORTE = /^-?\d{1,14}(\.\d{1,2})?$/
 
-function comoImporte(importe: string): Dinero {
+export function comoImporte(importe: string): Dinero {
   const limpio = importe.trim()
   if (!IMPORTE.test(limpio)) throw new ImporteInvalido()
   // El cero se vuelve a comprobar aca aunque el formulario ya lo haya rechazado: R1 lo
@@ -220,6 +244,138 @@ async function exigirSobreDeMismaCartera(
 }
 
 /* -------------------------------------------------------------------------- */
+/* El insert crudo, compartido con `traspasos.ts`                               */
+/* -------------------------------------------------------------------------- */
+
+/** Una pata del `insert`: la cuenta, su sobre y el importe **ya con signo**. */
+export interface PataDeInsercion {
+  cuenta_id: number
+  sobre_id: number | null
+  /**
+   * El importe con su signo, como SQL.
+   *
+   * Viene como `SQL` y no como `string` porque el signo lo decide quien llama y en la base:
+   * el alta simple lo saca del tipo, y una pata de traspaso del lado del formulario. Ver D2.
+   */
+  monto: SQL
+}
+
+export interface DatosDeInsercion {
+  usuario_id: number
+  /** Una o dos. Nunca vacia: una sola pata es un traspaso sin contraparte, no un alta vacia. */
+  patas: PataDeInsercion[]
+  tipo: TipoDeMovimiento
+  fecha: string
+  descripcion: string
+  comercio: string | null
+  origen?: 'manual' | 'recurrente'
+  transferencia_id?: number | null
+}
+
+export interface MovimientoInsertado {
+  id: number
+  monto: Dinero
+  /**
+   * El mismo importe sin signo, resuelto con `abs` **en SQL**.
+   *
+   * Va aca y no como un `importe.replace('-', '')` en el llamador porque quitarle el signo
+   * a un importe es regla del dinero: el signo lo decide la base, y un `slice` en
+   * JavaScript seria una segunda copia de esa decision. Es lo que usan los avisos que
+   * nombran una magnitud. Ver D2 y D6.
+   */
+  magnitud: Dinero
+  tipo: TipoDeMovimiento
+  fecha: string
+  periodo: string
+}
+
+/**
+ * El `insert` de una o dos filas, con la pertenencia metida en el `where`.
+ *
+ * Existe para que el alta simple y el alta de traspaso **no tengan dos copias** del mismo
+ * `where`, del mismo `periodo` y del mismo `comercioNormalizado`. Dos copias de una regla
+ * de seguridad son dos reglas: la segunda deja de actualizarse el dia que la primera cambia.
+ * Ver D2.
+ *
+ * **Las filas salen de una sola sentencia**, de un `values` de N filas. Es lo que hace que
+ * el emparejamiento de un traspaso no dependa de que el codigo siga las dos llamadas: si
+ * las dos patas salen de la misma sentencia con la misma regla de pertenencia, no hay forma
+ * de que una se inserte y la otra no. Ver D1.
+ *
+ * La pertenencia pide **las dos cosas** de una vez:
+ *
+ * ```
+ * count(*) = <patas> and count(distinct c.cartera_id) = 1
+ * ```
+ *
+ * - `count(*) = <patas>`: todas las cuentas existen, son de este usuario y no estan
+ *   eliminadas. Con una pata es "la cuenta es mia"; con dos son las dos.
+ * - `count(distinct cartera_id) = 1`: las dos son de la **misma** cartera. Es la prohibicion
+ *   de `traspasos` R1, y vive en el `where` y no antes del `insert` por el mismo motivo que
+ *   todo lo demas: entre comprobar y escribir hay una ventana, y con dos cuentas es el
+ *   doble de ancha. Ver D3 y D7.
+ *
+ * Con una sola pata el `count(distinct)` da 1 y la comprobacion de cartera no restringe nada,
+ * que es lo que tiene que pasar: una pata suelta es un traspaso valido, no uno entre carteras.
+ */
+export async function insertarMovimientos(
+  conexion: Base,
+  datos: DatosDeInsercion,
+): Promise<MovimientoInsertado[]> {
+  const origen = datos.origen ?? 'manual'
+
+  // El `abs` y la resta van en la base, no en JavaScript: el signo no tiene centavos, pero
+  // normalizar ahi evita depender de como el motor trate `-0.00`.
+  const valores = datos.patas.map(
+    (pata) => sql`(${pata.cuenta_id}::int, ${pata.sobre_id}::int, (${pata.monto})::numeric)`,
+  )
+
+  const idsDeCuenta = sql.join(
+    datos.patas.map((pata) => sql`${pata.cuenta_id}::int`),
+    sql`, `,
+  )
+
+  const pertenencia = sql`(
+    select
+      count(*) = ${datos.patas.length}::int
+      and count(distinct c.cartera_id) = 1
+    from cuentas c
+    join carteras t on t.id = c.cartera_id
+    where t.usuario_id = ${datos.usuario_id}
+      and c.eliminado_en is null
+      and c.id in (${idsDeCuenta})
+  )`
+
+  return filas<MovimientoInsertado>(conexion, sql`
+    with alta as (
+      insert into movimientos
+        (cuenta_id, sobre_id, tipo, monto, fecha, descripcion, comercio, origen, transferencia_id)
+      select
+        v.cuenta_id,
+        v.sobre_id,
+        ${datos.tipo}::tipo_movimiento,
+        v.monto,
+        ${datos.fecha}::date,
+        ${datos.descripcion},
+        ${datos.comercio},
+        ${origen}::origen_movimiento,
+        ${datos.transferencia_id ?? null}::int
+      from (values ${sql.join(valores, sql`, `)}) as v(cuenta_id, sobre_id, monto)
+      where ${pertenencia}
+      returning id, monto, tipo, fecha
+    )
+    select
+      a.id,
+      a.monto::text as monto,
+      abs(a.monto)::text as magnitud,
+      a.tipo,
+      to_char(a.fecha, 'YYYY-MM-DD') as fecha,
+      ${periodoSql(sql.raw('a.fecha'))} as periodo
+    from alta a
+  `)
+}
+
+/* -------------------------------------------------------------------------- */
 /* Alta                                                                       */
 /* -------------------------------------------------------------------------- */
 
@@ -281,44 +437,23 @@ export async function registrarMovimiento(
       datos.sobre_id ?? null,
     )
 
-    // El `where exists` es la pertenencia: si la cuenta no es de este usuario, no hay
-    // fila que insertar y el `alta` de abajo sale vacio.
-    const [creado] = await filas<{
-      id: number
-      monto: string
-      tipo: TipoDeMovimiento
-      fecha: string
-      periodo: string
-    }>(conexion, sql`
-      with alta as (
-        insert into movimientos
-          (cuenta_id, sobre_id, tipo, monto, fecha, descripcion, comercio, origen)
-        select
-          ${datos.cuenta_id},
-          ${sobre_id},
-          ${tipo}::tipo_movimiento,
-          case when ${tipo} = 'gasto' then -abs(${importe}::numeric) else abs(${importe}::numeric) end,
-          ${datos.fecha}::date,
-          ${datos.descripcion},
-          ${comercio},
-          ${origen}::origen_movimiento
-        where exists (
-          select 1 from cuentas c
-          join carteras t on t.id = c.cartera_id
-          where c.id = ${datos.cuenta_id}
-            and t.usuario_id = ${usuario_id}
-            and c.eliminado_en is null
-        )
-        returning id, monto, tipo, fecha
-      )
-      select
-        a.id,
-        a.monto::text as monto,
-        a.tipo,
-        to_char(a.fecha, 'YYYY-MM-DD') as fecha,
-        ${periodoSql(sql.raw('a.fecha'))} as periodo
-      from alta a
-    `)
+    // El `where` de pertenencia vive en el helper compartido: si la cuenta no es de este
+    // usuario, el `where` no da fila y el `insert` sale vacio.
+    const [creado] = await insertarMovimientos(conexion, {
+      usuario_id,
+      patas: [
+        {
+          cuenta_id: datos.cuenta_id,
+          sobre_id,
+          monto: sql`case when ${tipo} = 'gasto' then -abs(${importe}::numeric) else abs(${importe}::numeric) end`,
+        },
+      ],
+      tipo,
+      fecha: datos.fecha,
+      descripcion: datos.descripcion,
+      comercio,
+      origen,
+    })
 
     if (!creado) throw new CuentaAjena()
 
@@ -375,6 +510,8 @@ export async function listarMovimientos(
     .innerJoin(cuentas, eq(cuentas.id, movimientos.cuenta_id))
     .innerJoin(carteras, eq(carteras.id, cuentas.cartera_id))
     .leftJoin(sobres, eq(sobres.id, movimientos.sobre_id))
+    .leftJoin(otraPata, conContraparte)
+    .leftJoin(otraCuenta, eq(otraCuenta.id, otraPata.cuenta_id))
     .where(and(...condiciones))
     .orderBy(desc(movimientos.fecha), desc(movimientos.id))
 }
@@ -411,6 +548,8 @@ export async function listarMovimientosEliminados(
     .innerJoin(cuentas, eq(cuentas.id, movimientos.cuenta_id))
     .innerJoin(carteras, eq(carteras.id, cuentas.cartera_id))
     .leftJoin(sobres, eq(sobres.id, movimientos.sobre_id))
+    .leftJoin(otraPata, conContraparte)
+    .leftJoin(otraCuenta, eq(otraCuenta.id, otraPata.cuenta_id))
     .where(and(eq(carteras.usuario_id, usuario_id), isNotNull(movimientos.eliminado_en)))
     .orderBy(desc(movimientos.eliminado_en), desc(movimientos.id))
 }
@@ -439,6 +578,36 @@ function condicionesDeFiltro(usuario_id: number, filtro: FiltroMovimientos): SQL
 }
 
 /**
+ * La tabla `movimientos` otra vez, con otro nombre, para poder buscar la pata hermana.
+ *
+ * Es un alias y no una subconsulta porque el enlace es por grupo: dos filas con el mismo
+ * `transferencia_id`. La condicion del `join` excluye la fila que ya se esta mirando
+ * (`ne` por id), asi que una pata se empareja con la otra y no consigo misma.
+ */
+const otraPata = alias(movimientos, 'otra_pata')
+
+/**
+ * `cuentas` otra vez, para el nombre de la cuenta de la pata hermana.
+ *
+ * Es un alias aparte porque `otraPata` no tiene columna `nombre`: el nombre esta en la cuenta
+ * a la que apunta, y sin este join el "de A a B" del historial solo podria mostrar el id.
+ */
+const otraCuenta = alias(cuentas, 'otra_cuenta')
+
+/**
+ * El enlace de `otraPata`, para que los tres listados de este archivo usen el mismo.
+ *
+ * Es `leftJoin` y no `innerJoin` porque la mayoria de los movimientos no son de un traspaso, y
+ * un `innerJoin` los sacaria de la pantalla. Con `null = null` dando `NULL` —no `true`— en
+ * SQL, un movimiento sin `transferencia_id` no engancha con nadie y queda con la contraparte
+ * en `null`, que es lo que se quiere.
+ */
+const conContraparte = and(
+  eq(otraPata.transferencia_id, movimientos.transferencia_id),
+  ne(otraPata.id, movimientos.id),
+)
+
+/**
  * Las columnas de la vista de un movimiento, con lo derivado resuelto en SQL.
  *
  * Va en una funcion porque el listado y la busqueda por id tienen que devolver
@@ -461,6 +630,8 @@ function seleccionDeMovimiento() {
     comercio: movimientos.comercio,
     origen: movimientos.origen,
     transferencia_id: movimientos.transferencia_id,
+    contraparte_cuenta_id: sql<number | null>`${otraPata.id}`,
+    contraparte_cuenta_nombre: sql<string | null>`${otraCuenta.nombre}`,
     eliminado_en: movimientos.eliminado_en,
     periodo: periodoSql<string>(movimientos.fecha),
     // El pendiente se resuelve en SQL. Un traspaso tampoco tiene sobre y no es un
@@ -489,6 +660,8 @@ export async function buscarMovimiento(
     .innerJoin(cuentas, eq(cuentas.id, movimientos.cuenta_id))
     .innerJoin(carteras, eq(carteras.id, cuentas.cartera_id))
     .leftJoin(sobres, eq(sobres.id, movimientos.sobre_id))
+    .leftJoin(otraPata, conContraparte)
+    .leftJoin(otraCuenta, eq(otraCuenta.id, otraPata.cuenta_id))
     .where(and(...condiciones))
     .limit(1)
 
@@ -650,6 +823,9 @@ export interface DatosEdicion {
   comercio?: string | null
 }
 
+/** Lo que devuelve `editarMovimiento`. El aviso solo existe en la rama de traspaso. */
+export type MovimientoEditado = MovimientoVisto & { aviso?: string }
+
 /**
  * Corrige un movimiento.
  *
@@ -662,13 +838,16 @@ export interface DatosEdicion {
  * la que ya estaba— porque R5 pide que la cuenta y el sobre *sigan* siendo de la misma
  * cartera despues de editar, no antes. Validar el estado viejo dejaria pasar el caso en que
  * se mueve el sobre a otra cartera sin tocar la cuenta.
+ *
+ * Una pata de traspaso toma otro camino: `070` D5 la edita en espejo, reescribiendo el grupo
+ * entero. Ver `editarPataDeTraspaso`.
  */
 export async function editarMovimiento(
   db: Base,
   usuario_id: number,
   movimiento_id: number,
   cambios: DatosEdicion,
-): Promise<MovimientoVisto> {
+): Promise<MovimientoEditado> {
   return db.transaction(async (tx) => {
     const conexion = tx as Base
 
@@ -680,10 +859,15 @@ export async function editarMovimiento(
     // antes rompe el orden de las dos operaciones. Ver 5.6.
     if (fila.eliminado_en !== null) throw new MovimientoEliminado()
 
-    // D6: una pata se edita en espejo o no se edita. Editar una sola desempareja el grupo y
-    // el patrimonio deja de cuadrar. En `060` no hay ni forma de crear un traspaso, asi que
-    // esto no se pierde nada: `070` decide si el grupo se reescribe entero.
-    if (fila.transferencia_id !== null) throw new PataDeTraspaso()
+    if (fila.transferencia_id !== null) {
+      return await editarPataDeTraspaso(
+        conexion,
+        usuario_id,
+        movimiento_id,
+        fila as FilaDePata,
+        cambios,
+      )
+    }
 
     const cuentaEfectiva = cambios.cuenta_id ?? fila.cuenta_id
     const sobreEfectivo =
@@ -726,8 +910,195 @@ function montoConSigno(importe: string, tipo: TipoDeMovimiento): SQL<Dinero> {
   return sql<Dinero>`case when ${tipo} = 'gasto' then -abs(${importe}::numeric) else abs(${importe}::numeric) end`
 }
 
-/** Ausente o en blanco es `null`, igual que en el alta: no hay cadenas vacias de comercio. */
-function comercioNormalizado(comercio: string | null): string | null {
+/* -------------------------------------------------------------------------- */
+/* La edicion en espejo de una pata de `070`                                  */
+/* -------------------------------------------------------------------------- */
+
+/** La fila de una pata, con lo unico que hace falta para el espejo. */
+type FilaDePata = {
+  id: number
+  cuenta_id: number
+  cartera_id: number
+  tipo: TipoDeMovimiento
+  monto: Dinero
+  transferencia_id: number | null
+}
+
+/**
+ * Edita una pata de traspaso reescribiendo el **grupo entero**.
+ *
+ * `070` D5: las dos patas son un par inseparable, y editar una sola desempareja el grupo.
+ * Un par desemparejado es exactamente el estado que `patrimonio` no tolera: las dos filas
+ * dejan de anularse en `suma(saldos)` y el dinero aparece o desaparece sin que el usuario haya
+ * movido nada. Por eso la edicion de una pata no edita "la pata", edita **el traspaso**.
+ *
+ * Que se refleje y que no, en una sola pasada:
+ *
+ * - **Se reflejan** `monto`, `fecha`, `descripcion` y `comercio`. Son los datos del
+ *   traspaso, no los de la pata: si la pata opuesta queda con la fecha vieja, el traspaso
+ *   tiene dos fechas y `periodo` deja de ser una cosa.
+ * - **`cuenta_id` no se refleja**. Cada pata tiene su cuenta, y esa es la mitad de lo que hace
+ *   que el traspaso sea un traspaso. Si el `case` lo tocara, mover la pata de origen dejaria
+ *   las dos filas en la misma cuenta y el traspaso se anularia a si mismo.
+ * - **`sobre_id` se rechaza**. Un traspaso no tiene sobre: no es que no haya uno ahora, es que
+ *   no puede haberlo.
+ *
+ * **Un solo `update`**, con `case when id = <la pata editada>`, no un bucle por pata. Entre
+ * sentencia y sentencia las filas quedan a medio camino, y una lectura concurrente podria ver
+ * un par descuadrado. Es el mismo motivo por el que `eliminarMovimiento` hace su cascada en
+ * una sentencia en vez de en dos.
+ *
+ * El `grupo` se actualiza en la **misma transaccion**, con la misma `fecha` y la misma
+ * `descripcion` que las patas: si divergieran, el listado mostraria una fecha que ninguna de
+ * las dos filas tiene.
+ *
+ * El aviso de pata unica se vuelve a calcular despues de editar, porque R1 lo exige en cada
+ * operacion que deja el grupo con una sola pata, no solo en el alta.
+ */
+async function editarPataDeTraspaso(
+  conexion: Base,
+  usuario_id: number,
+  movimiento_id: number,
+  fila: FilaDePata,
+  cambios: DatosEdicion,
+): Promise<MovimientoEditado> {
+  const grupo = fila.transferencia_id as number
+
+  // Un traspaso no tiene sobre. No alcanza con ignorar el campo: si el formulario lo manda, el
+  // usuario debe enterarse de que ese dato no va a ir a ningun lado.
+  if (cambios.sobre_id !== undefined && cambios.sobre_id !== null) {
+    throw new TraspasoNoAsignable()
+  }
+
+  const comision = await comprobarCuentaDeLaMismaCartera(conexion, {
+    usuario_id,
+    cuenta_id: cambios.cuenta_id ?? fila.cuenta_id,
+    cartera_id: fila.cartera_id,
+  })
+
+  // Que lado del par es la pata editada sale del signo que **ya tiene**, no de cual se edita:
+  // el alta no guarda un "soy salida" y las dos patas se distinguen por el signo. Editar la
+  // pata negativa tiene que dejar negativa, y la otra positiva.
+  const editadaEsNegativa = fila.monto.trim().startsWith('-')
+
+  // La columna destino de un `SET` **no** se puede calificar con el alias de la relacion:
+  // Postgres responde `SET target columns cannot be qualified with the relation name`. Del
+  // lado derecho si, y por eso los `case` llevan `m.` y las asignaciones no.
+  const partes: SQL[] = []
+
+  if (cambios.monto !== undefined) {
+    const importe = comoImporte(cambios.monto)
+    partes.push(sql`monto = case when m.id = ${movimiento_id}::int
+        then case when ${editadaEsNegativa} then -abs(${importe}::numeric) else abs(${importe}::numeric) end
+        else case when ${editadaEsNegativa} then abs(${importe}::numeric) else -abs(${importe}::numeric) end
+      end`)
+  }
+
+  if (cambios.cuenta_id !== undefined) {
+    partes.push(sql`cuenta_id = case when m.id = ${movimiento_id}::int then ${cambios.cuenta_id}::int else m.cuenta_id end`)
+  }
+
+  // Los tres que van iguales a las dos patas no necesitan `case`: son el mismo valor para
+  // todos los ids del grupo.
+  if (cambios.fecha !== undefined) partes.push(sql`fecha = ${cambios.fecha}::date`)
+  if (cambios.descripcion !== undefined) partes.push(sql`descripcion = ${cambios.descripcion}`)
+  if (cambios.comercio !== undefined) {
+    partes.push(sql`comercio = ${comercioNormalizado(cambios.comercio)}`)
+  }
+
+  const fechas: { fecha: string } | undefined =
+    cambios.fecha === undefined ? undefined : { fecha: cambios.fecha }
+
+  if (partes.length > 0) {
+    // El `where` es el grupo entero, no `id = ...`: el otro lado tiene que cambiar tambien.
+    // Y el `exists` de pertenencia va sobre **cada** pata por separado, asi que una pata que
+    // de pronto no fuera de este usuario bloquea la edicion entera en vez de dejar un par a
+    // medias con una fila ajena.
+    const reescritas = await filas<{ id: number }>(conexion, sql`
+      update movimientos m
+      set ${sql.join(partes, sql`, `)}
+      where m.transferencia_id = ${grupo}::int
+        and m.eliminado_en is null
+        and exists (
+          select 1
+          from cuentas c
+          join carteras t on t.id = c.cartera_id
+          where c.id = m.cuenta_id
+            and t.usuario_id = ${usuario_id}
+        )
+      returning m.id
+    `)
+
+    if (reescritas.length === 0) throw new MovimientoNoExiste()
+  }
+
+  // El grupo se actualiza siempre, no solo si las patas cambiaron: si el usuario edito la
+  // fecha de una pata, el grupo tiene que tener esa fecha.
+  if (fechas !== undefined || cambios.descripcion !== undefined) {
+    await filas<{ id: number }>(conexion, sql`
+      update grupos_transferencia g
+      set
+        fecha = coalesce(${fechas?.fecha ?? null}::date, g.fecha),
+        descripcion = coalesce(${cambios.descripcion ?? null}, g.descripcion)
+      where g.id = ${grupo}::int
+        and exists (
+          select 1
+          from cuentas c
+          join carteras t on t.id = c.cartera_id
+          where c.id = ${fila.cuenta_id}
+            and t.usuario_id = ${usuario_id}
+        )
+      returning g.id
+    `)
+  }
+
+  // El aviso de R1 se recalcula sobre el grupo ya editado. Sale de la **forma** del grupo, asi
+  // que no hace falta medir el dinero suelto: si quedo una pata sola, el aviso va.
+  const [pareja] = await filas<{ patas: number }>(conexion, sql`
+    select count(*)::int as patas
+    from movimientos
+    where transferencia_id = ${grupo}::int and eliminado_en is null
+  `)
+
+  const vista = await buscarMovimiento(conexion, usuario_id, movimiento_id)
+  if (!vista) throw new MovimientoNoExiste()
+
+  if (pareja?.patas !== 1) return vista
+
+  return {
+    ...vista,
+    aviso: `Quedo con una sola pata, sin contraparte: el dinero suelto y el patrimonio se mueven por ${paraCampo(
+      vista.monto,
+    )}.`,
+  }
+}
+
+/**
+ * Que la cuenta de una pata siga siendo de este usuario y de **la cartera del grupo**.
+ *
+ * No alcanza con `exigirSobreDeMismaCartera`, que devuelve temprano cuando no hay sobre: las
+ * patas de traspaso siempre vienen con `sobre_id` nulo, asi que ahi no miraria nada. Y el
+ * criterio tiene que ser la cartera del **grupo**, no la cartera de la cuenta original: si el
+ * usuario mueve una pata a una cuenta de otra cartera, el par pasaria a cruzar carteras, que
+ * es justo lo que R1 prohibe. Ver D5 y D7.
+ */
+async function comprobarCuentaDeLaMismaCartera(
+  db: Base,
+  datos: { usuario_id: number; cuenta_id: number; cartera_id: number },
+): Promise<number> {
+  const cartera = await carteraDeCuenta(db, datos.usuario_id, datos.cuenta_id)
+  if (cartera === undefined) throw new CuentaAjena()
+  if (cartera !== datos.cartera_id) throw new CuentasDeCarterasDistintas()
+  return cartera
+}
+
+/**
+ * Ausente o en blanco es `null`, igual que en el alta: no hay cadenas vacias de comercio.
+ *
+ * Exportado por lo mismo que `comoImporte`: la regla de "comercio ausente es `null`, no
+ * cadena vacia" tiene que ser la misma en el alta simple y en la de traspaso.
+ */
+export function comercioNormalizado(comercio: string | null): string | null {
   if (comercio === null) return null
   return comercio.trim() === '' ? null : comercio.trim()
 }

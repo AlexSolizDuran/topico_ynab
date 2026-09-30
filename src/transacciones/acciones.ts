@@ -10,7 +10,6 @@ import {
   MovimientoEliminado,
   MovimientoNoExiste,
   MovimientoYaEliminado,
-  PataDeTraspaso,
   SobreDeOtraCartera,
   TraspasoNoAsignable,
   TraspasoNoRegistrable,
@@ -82,6 +81,10 @@ export interface ResultadoDeMovimiento {
  * reciben un `cartera_id` de confianza para cruzar contra el usuario: el repositorio lo
  * deduce de la cuenta y si esa cuenta no es del usuario lanza `CuentaAjena`. Nombrar los de
  * cartera seria suplantar una comprobacion que no ocurre.
+ *
+ * Y notese lo que **ya no** esta: `PataDeTraspaso`. `070` D5 cambio esa regla —editar una
+ * pata ahora reescribe el grupo entero—, asi que el error no lo lanza nadie. Dejarlo en la
+ * lista haria que este comentario, que promete listar solo lo alcanzable, mintiera.
  */
 function aResultado(error: unknown): ResultadoDeMovimiento {
   if (error instanceof ErroresDeMovimiento) {
@@ -91,7 +94,6 @@ function aResultado(error: unknown): ResultadoDeMovimiento {
     error instanceof MovimientoNoExiste ||
     error instanceof MovimientoEliminado ||
     error instanceof MovimientoYaEliminado ||
-    error instanceof PataDeTraspaso ||
     error instanceof TraspasoNoRegistrable ||
     error instanceof TraspasoNoAsignable ||
     error instanceof SobreDeOtraCartera ||

@@ -12,6 +12,7 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core'
 import { carteras } from './carteras'
+import { reglasRecurrentes } from './recurrencias'
 import { sobres } from './sobres'
 
 /** corriente, ahorro, efectivo, credito. El tipo decide si es dinero o deuda. */
@@ -75,14 +76,20 @@ export const origenDeMovimiento = pgEnum('origen_movimiento', ['manual', 'recurr
  * Por eso el borrado en cascada de `R6` se puede resolver con una sola instruccion
  * sobre las filas que comparten el valor.
  *
- * **No tiene `cartera_id`.** No la necesita: la cartera de un traspaso es la de cada
- * pata, y las dos pueden estar en carteras distintas —de hecho es el caso normal— asi
- * que una columna unica seria una de las dos, no la cartera del traspaso. Ver D2 y D5.
+ * **No tiene `cartera_id`, y no porque las patas puedan estar en carteras distintas.** Al
+ * principio se decia exactamente eso, y era falso: `traspasos` R1 prohibe el traspaso entre
+ * carteras y `PREGUNTAS.md` #1 lo confirmó como prohibicion total, sin la excepcion de la
+ * misma moneda. Las dos patas son **siempre** de la misma cartera, asi que una columna
+ * seria una duplicacion de `cuentas.cartera_id` de cada pata.
  *
- * Sin consumidor en `060`: el tipo `traspaso` se acepta y la cascada se garantiza, pero
- * **el formulario de traspaso es de `070-traspasos`**. La tabla entra ahora porque
- * agregar una columna a una tabla ya desplegada es una migracion mas, y este repo trata
- * las migraciones aplicadas como inmutables.
+ * La columna se dejo ausente igual, y por un motivo que sigue valiendo: las sumas del
+ * proyecto **agrupan por cartera**, y una columna en el grupo que no participa de ninguna
+ * suma es una segunda fuente de verdad para el mismo dato. Si alguna vez hiciera falta
+ * para indexar, se agrega con una migracion nueva: las aplicadas son inmutables. Ver D7.
+ *
+ * La creo `060-transacciones` junto a la columna `transferencia_id`, porque agregar una
+ * columna a una tabla ya desplegada es una migracion mas y este repo trata las migraciones
+ * aplicadas como inmutables. El **consumidor** —el alta del par— es `070-traspasos`.
  */
 export const gruposTransferencia = pgTable('grupos_transferencia', {
   id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
@@ -160,6 +167,11 @@ export const movimientos = pgTable(
 
     origen: origenDeMovimiento('origen').notNull().default('manual'),
 
+    /** Regla recurrente que origino este movimiento, si aplica. */
+    regla_id: integer('regla_id').references(() => reglasRecurrentes.id, {
+      onDelete: 'set null',
+    }),
+
     eliminado_en: timestamp('eliminado_en', { withTimezone: true }),
     creado_en: timestamp('creado_en', { withTimezone: true }).notNull().defaultNow(),
     actualizado_en: timestamp('actualizado_en', { withTimezone: true }).notNull().defaultNow(),
@@ -178,6 +190,9 @@ export const movimientos = pgTable(
     // de una pata si el indice fuera completo.
     index('movimientos_transferencia_id')
       .on(tabla.transferencia_id)
+      .where(sql`${tabla.eliminado_en} is null`),
+    index('movimientos_regla_id')
+      .on(tabla.regla_id)
       .where(sql`${tabla.eliminado_en} is null`),
   ],
 )

@@ -182,6 +182,19 @@ const EXENCIONES: Record<string, string> = {
   buscarSesionConUsuario: 'busca por token: el token es la credencial, no hay usuario aun',
   eliminarSesionesVencidas:
     'es mantenimiento global: borra filas vencidas de todos los usuarios, no lee datos de ninguno',
+  /**
+   * El aislamiento **si** se exige, pero el `usuario_id` viaja dentro de `datos` y no como
+   * parametro suelto, porque esta funcion inserta N patas a la vez y todas tienen que ser del
+   * mismo usuario y de la misma cartera. Un `usuario_id` por parametro se desincronizaria del
+   * resto del grupo en el primer error de tipeo.
+   *
+   * No es una exencion por comodidad: el `where` de pertenencia de esta funcion exige
+   * `t.usuario_id = datos.usuario_id` sobre **las** cuentas del lote, y el `count(*)` tiene que
+   * dar exactamente el numero de patas. Si un `usuario_id` equivocado llegara, no entraria
+   * ninguna fila.
+   */
+  insertarMovimientos:
+    'el usuario_id viaja en datos, no suelto: comprueba las N cuentas del lote de una vez',
 }
 
 describe('el aislamiento de los repositorios', () => {
