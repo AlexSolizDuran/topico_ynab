@@ -8,39 +8,73 @@
  *    valida contra una lista cerrada, porque una lista cerrada rechaza monedas
  *    reales que no alguien se acordo de escribir, y el resultado es un usuario al
  *    que se le dice que su moneda no existe.
- * 2. **Que moneda se ofrece en el selector.** `MONEDAS_CONOCIDAS` es la lista que
- *    la vista usa, y se puede ampliar sin tocar el modelo.
+ * 2. **Que moneda se ofrece en el selector.** `MONEDAS` es la lista que la vista
+ *    usa, con el pais de cada una para que el codigo solo no tenga que adivinarse.
+ *    Se puede ampliar sin tocar el modelo.
  *
  * Y la tercera, que es la que protege el dominio: **la moneda de una cartera no se
  * cambia**. No es una validacion, es la ausencia deliberada de una operacion.
  */
 
-/** Monedas que el selector ofrece. Ampliar aqui es una linea. */
-export const MONEDAS_CONOCIDAS = [
-  'MXN',
-  'USD',
-  'EUR',
-  'GBP',
-  'CAD',
-  'JPY',
-  'CHF',
-  'ARS',
-  'CLP',
-  'COP',
-  'PEN',
-  'UYU',
-  'BRL',
-  'DOP',
-  'GTQ',
-  'CRC',
-  'HNL',
-  'AUD',
-  'NZD',
-  'SEK',
-  'NOK',
-  'DKK',
-  'PLN',
+/**
+ * Moneda de una cartera con su pais, para el selector.
+ *
+ * El pais va con parentesis porque el codigo solo no le dice nada al usuario: `MXN`
+ * no es evidente, y una cartera es una decision que no se puede deshacer
+ * (`MonedaInmutable`). Ver el pais reduce la chance de que se elija por costumbre y
+ * no a proposito.
+ *
+ * El orden es el que ve el usuario, asi que empieza por la moneda por defecto.
+ */
+export const MONEDAS = [
+  { codigo: 'BOB', pais: 'Bolivia' },
+  { codigo: 'MXN', pais: 'México' },
+  { codigo: 'USD', pais: 'Estados Unidos' },
+  { codigo: 'EUR', pais: 'Zona euro' },
+  { codigo: 'GBP', pais: 'Reino Unido' },
+  { codigo: 'CAD', pais: 'Canadá' },
+  { codigo: 'JPY', pais: 'Japón' },
+  { codigo: 'CHF', pais: 'Suiza' },
+  { codigo: 'ARS', pais: 'Argentina' },
+  { codigo: 'CLP', pais: 'Chile' },
+  { codigo: 'COP', pais: 'Colombia' },
+  { codigo: 'PEN', pais: 'Perú' },
+  { codigo: 'UYU', pais: 'Uruguay' },
+  { codigo: 'BRL', pais: 'Brasil' },
+  { codigo: 'DOP', pais: 'República Dominicana' },
+  { codigo: 'GTQ', pais: 'Guatemala' },
+  { codigo: 'CRC', pais: 'Costa Rica' },
+  { codigo: 'HNL', pais: 'Honduras' },
+  { codigo: 'AUD', pais: 'Australia' },
+  { codigo: 'NZD', pais: 'Nueva Zelanda' },
+  { codigo: 'SEK', pais: 'Suecia' },
+  { codigo: 'NOK', pais: 'Noruega' },
+  { codigo: 'DKK', pais: 'Dinamarca' },
+  { codigo: 'PLN', pais: 'Polonia' },
 ] as const
+
+/**
+ * Moneda que el selector propone por defecto.
+ *
+ * Vive ACA y no en la vista porque hay dos lugares que la necesitan: el selector de
+ * cartera nueva y la cartera que se crea al registrarse (`sesion/servicio.ts`). Si
+ * cada uno escribiera su literal, un cambio dejaria una de las dos en la moneda
+ * anterior sin que nada lo note.
+ */
+export const MONEDA_POR_DEFECTO = 'BOB'
+
+/**
+ * Solo los codigos, en el mismo orden que `MONEDAS`.
+ *
+ * Se deriva de `MONEDAS` en vez de escribirse aparte: dos listas al mismo tiempo
+ * divergen, y la que sobrevive es la que nadie vuelve a leer.
+ */
+export const MONEDAS_CONOCIDAS = MONEDAS.map((m) => m.codigo)
+
+/** Como se ve una moneda en el selector: `BOB (Bolivia)`. */
+export function etiquetaMoneda(moneda: { codigo: string; pais: string }): string {
+  return `${moneda.codigo} (${moneda.pais})`
+}
 
 /**
  * Un codigo de moneda tiene forma: tres letras mayusculas.

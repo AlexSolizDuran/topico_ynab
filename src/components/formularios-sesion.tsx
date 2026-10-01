@@ -11,7 +11,12 @@
 
 import { useActionState } from 'react'
 import { useFormStatus } from 'react-dom'
-import { accionCambiarContrasena, accionIniciarSesion, accionRegistrar } from '../sesion/acciones'
+import {
+  accionActualizarPerfil,
+  accionCambiarContrasena,
+  accionIniciarSesion,
+  accionRegistrar,
+} from '../sesion/acciones'
 import { MINIMO_CONTRASENA } from '../sesion/validacion'
 import { Aviso, Boton, Campo } from './sesion'
 
@@ -127,6 +132,66 @@ export function FormularioCambiarContrasena() {
       />
 
       <AccionPendiente>Cambiar contrasena</AccionPendiente>
+    </form>
+  )
+}
+
+/**
+ * Datos de perfil: nombre, apellido y correo.
+ *
+ * `nombre_usuario` y `zona_horaria` se muestran pero NO se mandan como campos
+ * editables: el primero es el identificador de acceso, y la segunda decide donde
+ * cae el corte de mes de cada sobre. Van en `hidden` para que el formulario se
+ * entendan solo, y el servicio los ignora igual.
+ */
+export function FormularioDatosPerfil({
+  nombre,
+  apellido,
+  correo,
+  nombre_usuario,
+  zona_horaria,
+}: {
+  nombre: string
+  apellido: string
+  correo: string
+  nombre_usuario: string
+  zona_horaria: string
+}) {
+  const [estado, accion] = useActionState(accionActualizarPerfil, INICIAL)
+
+  return (
+    <form action={accion} className="flex flex-col gap-5">
+      {estado.error ? <Aviso tono="error">{estado.error}</Aviso> : null}
+      {estado.aviso ? <Aviso tono="exito">{estado.aviso}</Aviso> : null}
+
+      <Campo
+        nombre="nombre"
+        etiqueta="Nombre"
+        autoComplete="given-name"
+        defaultValue={nombre}
+        error={estado.campos?.nombre}
+      />
+      <Campo
+        nombre="apellido"
+        etiqueta="Apellido"
+        autoComplete="family-name"
+        defaultValue={apellido}
+        error={estado.campos?.apellido}
+      />
+      <Campo
+        nombre="correo"
+        etiqueta="Correo"
+        tipo="email"
+        autoComplete="email"
+        defaultValue={correo}
+        error={estado.campos?.correo}
+      />
+
+      {/* No editables: se muestran para que el usuario sepa cual es, y no se pueden tocar. */}
+      <input type="hidden" name="nombre_usuario" value={nombre_usuario} readOnly />
+      <input type="hidden" name="zona_horaria" value={zona_horaria} readOnly />
+
+      <AccionPendiente>Guardar cambios</AccionPendiente>
     </form>
   )
 }

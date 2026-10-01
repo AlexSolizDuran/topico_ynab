@@ -16,7 +16,7 @@ import { crearBaseDePruebas } from '../helpers/pg'
  * texto daria una sensacion de cobertura que no real.
  */
 
-/** Los 23 escenarios de `autenticacion`, en el orden del spec. */
+/** Los 28 escenarios de `autenticacion`, en el orden del spec. */
 const ESCENARIOS = [
   'Registro exitoso',
   'Se rechaza el nombre de usuario duplicado',
@@ -35,6 +35,11 @@ const ESCENARIOS = [
   'Contrasena actual incorrecta',
   'Contrasena nueva demasiado corta',
   'Contrasena cambiada',
+  'Actualizacion de datos',
+  'Se rechaza el correo duplicado al editar el perfil',
+  'El nombre de usuario no cambia',
+  'Se rechaza el cambio de nombre de usuario',
+  'La zona horaria no se cambia desde el perfil',
   'Token ausente o invalido',
   'Operacion protegida valida',
   'Token no reutilizable entre sesiones',
@@ -93,6 +98,19 @@ const MAPA: Record<string, string[]> = {
     'servicio.test.ts:explica el requisito de longitud cuando la nueva es corta',
   ],
   'Contrasena cambiada': ['servicio.test.ts:cambia la contrasena y la anterior deja de ser valida'],
+  'Actualizacion de datos': ['perfil.test.ts:guarda el nombre, el apellido y el correo nuevos'],
+  'Se rechaza el correo duplicado al editar el perfil': [
+    'perfil.test.ts:rechaza un correo que ya es de otra cuenta, sin guardar nada',
+  ],
+  'El nombre de usuario no cambia': [
+    'perfil.test.ts:un guardado normal deja intacto el nombre de usuario',
+  ],
+  'Se rechaza el cambio de nombre de usuario': [
+    'perfil.test.ts:ignora un nombre de usuario distinto al que ya tiene',
+  ],
+  'La zona horaria no se cambia desde el perfil': [
+    'perfil.test.ts:ignora una zona horaria distinta a la que ya tiene',
+  ],
   'Token ausente o invalido': [
     'proteccion.test.ts:rechaza un token ausente o vacio',
     'proteccion.test.ts:rechaza un token inventado',
@@ -116,13 +134,13 @@ const MAPA: Record<string, string[]> = {
 }
 
 describe('la trazabilidad de autenticacion', () => {
-  it('el mapa cubre los 23 escenarios del spec, sin sobras ni faltas', async () => {
+  it('el mapa cubre los 28 escenarios del spec, sin sobras ni faltas', async () => {
     const spec = await import('node:fs/promises').then((fs) =>
       fs.readFile('openspec/specs/autenticacion/spec.md', 'utf8'),
     )
     const delSpec = [...spec.matchAll(/#### Scenario: (.+)/g)].map((c) => (c[1] ?? '').trim())
 
-    expect(ESCENARIOS).toHaveLength(23)
+    expect(ESCENARIOS).toHaveLength(28)
     expect(delSpec.sort()).toEqual([...ESCENARIOS].sort())
     expect(Object.keys(MAPA).sort()).toEqual([...ESCENARIOS].sort())
   })

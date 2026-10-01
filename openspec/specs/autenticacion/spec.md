@@ -98,6 +98,32 @@ El sistema SHALL permitir que un usuario autenticado defina una nueva contrasena
 
 ---
 
+### Requirement: El usuario actualiza sus datos de perfil
+El sistema SHALL permitir que un usuario autenticado actualice su nombre, su apellido y su correo electronico. El sistema SHALL rechazar la actualizacion cuando el correo electronico ya pertenezca a otra cuenta. El sistema SHALL tratar el nombre de usuario y la zona horaria como inmodificables, y SHALL rechazar la actualizacion cuando se intente cambiar alguno de los dos.
+
+#### Scenario: Actualizacion de datos
+- **WHEN** un usuario autenticado envia un nombre, un apellido y un correo libre
+- **THEN** el sistema guarda los tres datos y los muestra en su perfil
+
+#### Scenario: Se rechaza el correo duplicado al editar el perfil
+- **WHEN** un usuario autenticado envia un correo electronico que ya pertenece a otra cuenta
+- **THEN** el sistema muestra un error y no guarda ningun dato del envio
+
+#### Scenario: El nombre de usuario no cambia
+- **WHEN** un usuario autenticado guarda su perfil reenviando su nombre de usuario sin modificar
+- **THEN** el sistema guarda los datos y conserva el mismo nombre de usuario
+
+#### Scenario: Se rechaza el cambio de nombre de usuario
+- **WHEN** un usuario autenticado envia un nombre de usuario distinto del que ya tiene
+- **THEN** el sistema rechaza el envio y el nombre de usuario permanece sin cambios
+
+#### Scenario: La zona horaria no se cambia desde el perfil
+- **WHEN** un usuario autenticado guarda su perfil con una zona horaria distinta de la que tiene
+- **THEN** el sistema rechaza el envio y la zona horaria permanece sin cambios
+- **AND** el sistema sigue usando la zona horaria original para determinar el periodo actual de sobres, metas y reglas recurrentes
+
+---
+
 ### Requirement: El sistema protege las operaciones que cambian estado
 El sistema SHALL asociar a cada sesion un token de proteccion contra peticiones no autorizadas, incluirlo en las operaciones que cambian estado y SHALL rechazar las solicitudes que lleguen sin ese token o con uno invalido. El sistema SHALL aplicar esta proteccion al menos al inicio de sesion, al registro, al cierre de sesion y al cambio de contrasena.
 

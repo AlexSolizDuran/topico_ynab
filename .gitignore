@@ -7,8 +7,9 @@ build/
 .env*
 !.env.example
 
-# Migraciones generadas por drizzle-kit
-drizzle/meta/
+# El historial de migraciones y sus snapshots SI se versionan: `drizzle-kit
+# migrate` lee meta/_journal.json para saber que archivos aplicar. Si se ignoran,
+# una base nueva aplica un historial incompleto.
 *.tsbuildinfo
 next-env.d.ts
 

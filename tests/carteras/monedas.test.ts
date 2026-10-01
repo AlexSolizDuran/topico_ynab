@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
+  MONEDA_POR_DEFECTO,
+  MONEDAS,
   MONEDAS_CONOCIDAS,
   MonedaDistinta,
   MonedaInmutable,
   esCodigoMoneda,
+  etiquetaMoneda,
   exigirMismaMoneda,
 } from '../../src/carteras/monedas'
 import {
@@ -29,6 +32,38 @@ describe('codigos de moneda', () => {
     expect(MONEDAS_CONOCIDAS).toContain('MXN')
     expect(new Set(MONEDAS_CONOCIDAS).size).toBe(MONEDAS_CONOCIDAS.length)
     expect(MONEDAS_CONOCIDAS.every(esCodigoMoneda)).toBe(true)
+  })
+})
+
+describe('las monedas del selector', () => {
+  it('lleva el pais entre parentesis, porque el codigo solo no dice nada', () => {
+    expect(etiquetaMoneda({ codigo: 'BOB', pais: 'Bolivia' })).toBe('BOB (Bolivia)')
+  })
+
+  it('deriva los codigos de MONEDAS, para que las dos listas no divergan', () => {
+    expect(MONEDAS_CONOCIDAS).toEqual(MONEDAS.map((m) => m.codigo))
+  })
+
+  it('no repite codigo ni pais', () => {
+    expect(new Set(MONEDAS.map((m) => m.codigo)).size).toBe(MONEDAS.length)
+    expect(new Set(MONEDAS.map((m) => m.pais)).size).toBe(MONEDAS.length)
+  })
+
+  it('deja Bolivia como la moneda por defecto, y no Mexico', () => {
+    expect(MONEDA_POR_DEFECTO).toBe('BOB')
+    // Y que sea la primera del selector, para que `defaultValue` y lo que ve el
+    // usuario coincidan en vez de depender de dos cosas.
+    expect(MONEDAS[0].codigo).toBe(MONEDA_POR_DEFECTO)
+  })
+
+  it('ofrece Bolivia, que antes no estaba en el selector', () => {
+    expect(MONEDAS_CONOCIDAS).toContain('BOB')
+  })
+
+  it('tiene un pais para cada moneda, porque ninguna se muestra vacia', () => {
+    for (const moneda of MONEDAS) {
+      expect(moneda.pais.length).toBeGreaterThan(0)
+    }
   })
 })
 

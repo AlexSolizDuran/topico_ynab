@@ -8,6 +8,7 @@ import {
   CuentaBloqueada,
   DatosDuplicados,
   UsuarioInactivo,
+  actualizarPerfil,
   cambiarContrasena,
   cerrarSesion,
   iniciarSesion,
@@ -23,6 +24,21 @@ import {
   tokenDeSesion,
 } from './server'
 import { ErroresDeValidacion } from './validacion'
+
+/**
+ * Datos que llegan del formulario de perfil.
+ *
+ * `nombre_usuario` y `zona_horaria` se leen del `FormData` a proposito: el
+ * formulario los reenvia para poder mostrarlos, y el servicio los ignora. Que un
+ * campo se mande no significa que se pueda escribir.
+ */
+function aObjetoPerfil(datos: FormData): Record<string, unknown> {
+  return {
+    nombre: String(datos.get('nombre') ?? ''),
+    apellido: String(datos.get('apellido') ?? ''),
+    correo: String(datos.get('correo') ?? ''),
+  }
+}
 
 /**
  * Server Actions de `autenticacion`.
@@ -185,4 +201,28 @@ export async function accionCambiarContrasena(
 
   revalidatePath('/', 'layout')
   return { ok: true, aviso: 'Tu contrasena cambio.' }
+}
+
+/**
+ * Guarda los datos de perfil.
+ *
+ * A diferencia del resto, esta no redirige: el usuario sigue en la misma pantalla
+ * y necesita ver el aviso de exito. Tampoco renueva la sesion, porque no cambio nada
+ * que afecte a la autenticacion.
+ */
+export async function accionActualizarPerfil(
+  _estado: ResultadoAccion,
+  datos: FormData,
+): Promise<ResultadoAccion> {
+  const db = obtenerCliente()
+  try {
+    await exigirTokenProteccion()
+    const sesion = await exigirSesion()
+    await actualizarPerfil(db, sesion.usuario_id, aObjetoPerfil(datos))
+  } catch (error) {
+    return aResultado(error)
+  }
+
+  revalidatePath('/', 'layout')
+  return { ok: true, aviso: 'Tus datos se guardaron.' }
 }

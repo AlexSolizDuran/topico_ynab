@@ -17,7 +17,7 @@ import {
   accionRestaurarCartera,
   type ResultadoDeCartera,
 } from '../carteras/acciones'
-import { MONEDAS_CONOCIDAS } from '../carteras/monedas'
+import { MONEDA_POR_DEFECTO, MONEDAS, etiquetaMoneda } from '../carteras/monedas'
 import { NOMBRE_CARTERA_MAXIMO } from '../carteras/validacion'
 import { Aviso, Boton, Campo } from './sesion'
 
@@ -47,12 +47,12 @@ export function FormularioNuevaCartera() {
         <span className="text-sm font-medium text-slate-700">Moneda</span>
         <select
           name="moneda"
-          defaultValue="MXN"
+          defaultValue={MONEDA_POR_DEFECTO}
           className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
         >
-          {MONEDAS_CONOCIDAS.map((codigo) => (
-            <option key={codigo} value={codigo}>
-              {codigo}
+          {MONEDAS.map((moneda) => (
+            <option key={moneda.codigo} value={moneda.codigo}>
+              {etiquetaMoneda(moneda)}
             </option>
           ))}
         </select>

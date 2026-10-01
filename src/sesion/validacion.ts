@@ -37,9 +37,16 @@ const contrasena = z
   .string()
   .min(MINIMO_CONTRASENA, `La contrasena necesita al menos ${MINIMO_CONTRASENA} caracteres.`)
 
+/** Nombre y apellido comparten largo, porque son las dos columnas de 80. */
+const nombre = z.string().transform(texto).pipe(z.string().min(1, 'Escribe tu nombre.').max(80))
+const apellido = z
+  .string()
+  .transform(texto)
+  .pipe(z.string().min(1, 'Escribe tu apellido.').max(80))
+
 export const esquemaRegistro = z.object({
-  nombre: z.string().transform(texto).pipe(z.string().min(1, 'Escribe tu nombre.').max(80)),
-  apellido: z.string().transform(texto).pipe(z.string().min(1, 'Escribe tu apellido.').max(80)),
+  nombre,
+  apellido,
   nombre_usuario: nombreDeUsuario,
   correo,
   contrasena,
@@ -56,9 +63,25 @@ export const esquemaCambioContrasena = z.object({
   confirmacion: z.string().pipe(z.string().min(1, 'Repite la contrasena nueva.')),
 })
 
+/**
+ * Datos de perfil editables.
+ *
+ * `nombre_usuario` no esta en el esquema, y `zona_horaria` tampoco. El primero
+ * porque es el identificador de acceso; la segunda porque fija donde cae el corte de
+ * mes de cada sobre, meta y regla recurrente, y cambiarla mueve periodos ya
+ * cerrados. Ninguno de los dos es un campo que se valide y se rechace: son campos
+ * que no existen para esta operacion.
+ */
+export const esquemaPerfil = z.object({
+  nombre,
+  apellido,
+  correo,
+})
+
 export type EntradaRegistro = z.infer<typeof esquemaRegistro>
 export type EntradaInicioSesion = z.infer<typeof esquemaInicioSesion>
 export type EntradaCambioContrasena = z.infer<typeof esquemaCambioContrasena>
+export type EntradaPerfil = z.infer<typeof esquemaPerfil>
 
 /** Un error de validacion, por campo, listo para que la vista lo señale. */
 export class ErroresDeValidacion extends Error {

@@ -186,6 +186,43 @@ export async function actualizarContrasena(
     .where(and(eq(usuarios.id, usuario_id), eq(usuarios.activo, true)))
 }
 
+/**
+ * Actualiza los datos de perfil del usuario.
+ *
+ * El tipo de `datos` NO admite `nombre_usuario` ni `zona_horaria`, y eso es
+ * deliberado. El nombre de usuario es el identificador de acceso y no se edita; la
+ * zona horaria fija donde cae el corte de mes de cada sobre, meta y regla
+ * recurrente, asi que moverla desplaza periodos ya cerrados. Que el compilador lo
+ * rechace es mas fuerte que acordarse de comprobarlo en cada llamada, y es el mismo
+ * criterio que `MonedaInmutable` en el mundo de las carteras: la operacion que no
+ * debe existir no se expone, no se valida. `hash_contrasena`, `activo`,
+ * `intentos_fallidos` y `bloqueado_hasta` quedan fuera por el mismo motivo.
+ *
+ * El correo se resuelve por el indice unico, igual que en `crearUsuario`, y no con
+ * una consulta previa de "ya existe": esa consulta tiene una ventana entre la
+ * lectura y la escritura, y el indice no.
+ */
+export async function actualizarDatosUsuario(
+  db: Base,
+  usuario_id: number,
+  datos: Pick<Usuario, 'nombre' | 'apellido' | 'correo'>,
+): Promise<Usuario> {
+  try {
+    const [actualizado] = await db
+      .update(usuarios)
+      .set(datos)
+      .where(and(eq(usuarios.id, usuario_id), eq(usuarios.activo, true)))
+      .returning()
+
+    if (!actualizado) throw new UsuarioInactivo()
+    return actualizado
+  } catch (error) {
+    // Un correo que ya pertenece a otra cuenta sale de aqui como `DatosDuplicados`,
+    // no como el SQLSTATE 23505 crudo.
+    throw traducirViolacion(error)
+  }
+}
+
 /** Cuentas del usuario. La cartera inicial se crea con la de registro. */
 export async function carterasDe(db: Base, usuario_id: number) {
   return db.select().from(carteras).where(eq(carteras.usuario_id, usuario_id))

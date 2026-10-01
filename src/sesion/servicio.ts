@@ -12,6 +12,7 @@ import 'server-only'
 import type { Base } from '../db/tipos'
 import type { Usuario } from '../db/schema'
 import { crearCartera } from '../repos/carteras'
+import { MONEDA_POR_DEFECTO } from '../carteras/monedas'
 import {
   buscarSesionConUsuario,
   crearSesion as crearFilaSesion,
@@ -25,6 +26,7 @@ import {
   DatosDuplicados,
   UsuarioInactivo,
   actualizarContrasena,
+  actualizarDatosUsuario,
   buscarPorId,
   buscarPorNombreUsuario,
   crearUsuario as crearFilaUsuario,
@@ -39,10 +41,12 @@ import {
   MINIMO_CONTRASENA,
   esquemaCambioContrasena,
   esquemaInicioSesion,
+  esquemaPerfil,
   esquemaRegistro,
   validar,
   type EntradaCambioContrasena,
   type EntradaInicioSesion,
+  type EntradaPerfil,
   type EntradaRegistro,
 } from './validacion'
 
@@ -131,7 +135,7 @@ export async function registrarUsuario(db: Base, entrada: unknown): Promise<Resu
 
     const cartera = await crearCartera(tx, usuario.id, {
       nombre: datos.nombre,
-      moneda: 'MXN',
+      moneda: MONEDA_POR_DEFECTO,
       orden: 0,
     })
 
@@ -264,6 +268,46 @@ export async function cambiarContrasena(
 /** Resuelve la sesion vigente de un token, o `undefined` si no hay. */
 export function sesionDe(db: Base, token: string): Promise<SesionVigente | undefined> {
   return buscarSesionConUsuario(db, token)
+}
+
+/**
+ * Actualiza los datos de perfil de un usuario autenticado.
+ *
+ * No toca el nombre de usuario ni la contrasena: el primero porque es el
+ * identificador de acceso y no se edita, la segunda porque tiene su propia operacion
+ * (`cambiarContrasena`) que exige la contrasena actual y cierra las otras sesiones.
+ * Dejarlas pasar por aqui abriria una puerta para cambiar la contrasena sin la
+ * verificar, y para dejar al usuario fuera de su propia cuenta.
+ *
+ * El formulario manda `nombre_usuario` y `zona_horaria` en campos ocultos para que
+ * la vista loslea, y se comparan contra la fila real: no editarlos en la interfaz
+ * no es lo mismo que no poder mandarlos. Un `POST` a mano los lleva igual, asi que
+ * si difieren se rechaza el envio en vez de ignorarlo en silencio. Asi el usuario
+ * que escribe mal su correo no pierde sus otros datos porque el campo invisible
+ * venia desactualizado.
+ *
+ * Un correo que ya es de otra cuenta sale como `DatosDuplicados`, que la accion
+ * pinta junto al campo.
+ */
+export async function actualizarPerfil(
+  db: Base,
+  usuario_id: number,
+  entrada: unknown,
+  intactos: { nombre_usuario: string; zona_horaria: string },
+): Promise<Usuario> {
+  const campos: Record<string, string> = {}
+
+  for (const campo of ['nombre_usuario', 'zona_horaria'] as const) {
+    const enviado = (entrada as Record<string, unknown> | null)?.[campo]
+    if (enviado === undefined) continue
+    if (String(enviado) !== intactos[campo]) {
+      campos[campo] = 'No se puede cambiar desde el perfil.'
+    }
+  }
+  if (Object.keys(campos).length > 0) throw new ErroresDeValidacion(campos)
+
+  const datos: EntradaPerfil = validar(esquemaPerfil, entrada)
+  return actualizarDatosUsuario(db, usuario_id, datos)
 }
 
 export { CredencialesInvalidas, CuentaBloqueada, DatosDuplicados, UsuarioInactivo }

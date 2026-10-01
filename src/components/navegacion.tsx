@@ -24,7 +24,7 @@ const ENLACES = [
   { href: '/panel', texto: 'Panel' },
   { href: '/carteras', texto: 'Carteras' },
   { href: '/comparativos', texto: 'Comparativos' },
-  { href: '/contrasena', texto: 'Contrasena' },
+  { href: '/perfil', texto: 'Perfil' },
 ] as const
 
 /** Estado inicial: sin errores. El logout no necesita mostrar avisos de exito. */
