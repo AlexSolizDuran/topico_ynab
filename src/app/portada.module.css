@@ -1,0 +1,553 @@
+﻿/*
+ * Estilos de la portada.
+ *
+ * La paleta NO esta aca: la aporta `components/tema-oscuro.module.css` y se activa con la
+ * clase `oscuro` que `page.tsx` pone en el contenedor. Este modulo tiene lo propio de la
+ * landing: hero, cinta, capacidades, balance, pasos y CTAs.
+ *
+ * No va en `globals.css` a proposito. Alli esta el sistema de diseno del PRODUCTO —los tokens
+ * que consumen el panel, los sobres, las cuentas— y mezclarlo obligaria a que la landing
+ * contaminara al producto y viceversa.
+ *
+ * LA PALETA. Es deliberadamente distinta de la del producto. Alli el color es semantico
+ * y sobrio —azul de marca, verde disponible, rojo desborde— porque quien la usa esta
+ * mirando sus datos y necesita leerlos, noxu administrarlos. Aca se busca otra cosa:
+ * que la pagina se recuerde. Por eso la base es casi negra y los acentos son acidos.
+ *
+ * Lo que NO cambia es el SIGNIFICADO: verde sigue siendo disponible, rojo sigue siendo
+ * desborde, ambar sigue siendo atencion. Cambia el tono, no el codigo. Un usuario que
+ * llega de la landing al panel ya sabe que el verde es "esta bien" porque lo vio igual
+ * en las dos pantallas, aunque en tonos distintos.
+ *
+ * Los importes nunca se formatizan aca: llegan como `Dinero` ya formateado por
+ * `formatear` de `@/dinero`. Este archivo no toca cifras.
+ */
+
+.portada {
+  position: relative;
+  isolation: isolate;
+  background-color: var(--fondo);
+  color: var(--tinta);
+  overflow-x: clip;
+}
+
+/* ---------------------------------------------------------------- aurora de fondo */
+
+/*
+ * Tres manchas de color muy difuminadas que se mueven lento. Es el efecto que mas
+ * cambia la sensacion de la pagina: el fondo deja de ser plano y pasa a tener volumen.
+ *
+ * `filter: blur(90px)` es lo que hace el trabajo. Sin el, son circulos duros; con el,
+ * son luz. Y van en `aria-hidden` porque son decoracion: un lector de pantalla no tiene
+ * que anunciarlas.
+ */
+.aurora {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.aurora::before,
+.aurora::after,
+.aurora span {
+  content: '';
+  position: absolute;
+  display: block;
+  border-radius: 9999px;
+  filter: blur(90px);
+  will-change: transform;
+}
+
+.aurora::before {
+  top: -14rem;
+  left: -8rem;
+  width: 40rem;
+  height: 40rem;
+  background: radial-gradient(circle, rgba(204, 255, 0, 0.5), transparent 68%);
+  animation: girar-lento 26s ease-in-out infinite alternate;
+}
+
+.aurora::after {
+  top: 4rem;
+  right: -12rem;
+  width: 46rem;
+  height: 46rem;
+  background: radial-gradient(circle, rgba(0, 240, 200, 0.42), transparent 68%);
+  animation: girar-lento 32s ease-in-out infinite alternate-reverse;
+}
+
+.aurora span {
+  bottom: -18rem;
+  left: 28%;
+  width: 44rem;
+  height: 44rem;
+  background: radial-gradient(circle, rgba(255, 61, 129, 0.34), transparent 70%);
+  animation: girar-lento 38s ease-in-out infinite alternate;
+}
+
+@keyframes girar-lento {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(4rem, 3rem, 0) scale(1.18);
+  }
+}
+
+/* El grano lo aporta `tema-oscuro.module.css` (`.grano`), con la receta del panel: mismo ruido
+   en todas las pantallas oscuras. Aca usaba 180x180 con `mix-blend-mode: overlay`. */
+
+/* La grilla de lineas la aporta `tema-oscuro.module.css` (`.rejilla`), ya muy tenue, para que
+   todas las pantallas compartan una sola textura. */
+
+/* -------------------------------------------------------------------- tipografia */
+
+/*
+ * Texto con degradado. Se usa `background-clip: text` con el color transparente: lo que
+ * se ve recortado es el fondo, no la letra.
+ */
+.degradado {
+  background-image: linear-gradient(
+    100deg,
+    var(--lima-suave) 0%,
+    var(--lima) 32%,
+    var(--menta) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.degradadoCalido {
+  background-image: linear-gradient(100deg, var(--cobre) 0%, var(--magenta) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/*
+ * Titulares en la tipografia de cifras del proyecto (Plus Jakarta Sans). Es la misma
+ * variable que usa el panel, asi que la portada y el producto comparten voz tipografica.
+ */
+.titular {
+  font-family: var(--font-cifra), ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.035em;
+  line-height: 0.98;
+}
+
+/* --------------------------------------------------------------------- superficies */
+
+/* Vidrio: superficie translucida con desenfoque de lo que hay detras. */
+.vidrio {
+  background-color: var(--superficie);
+  border: 1px solid var(--borde);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+/*
+ * Borde con degradado, sin marcar un pseudo-elemento por tarjeta.
+ *
+ * El truco: el fondo del elemento es el degradado y se le hace padding de 1px con
+ * `border-box`; un `::before` del mismo tamaño lleva el color del fondo real y se
+ * dibuja encima con margen de -1px. Lo que queda visible es el borde de 1px del
+ * degradado. Se elige esto y no `border-image` porque `border-image` no sigue al
+ * `border-radius`.
+ */
+.bordeGradiente {
+  position: relative;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--fondo-medio), var(--fondo-medio)) padding-box,
+    linear-gradient(140deg, rgba(204, 255, 0, 0.55), rgba(0, 240, 200, 0.4) 45%, rgba(255, 61, 129, 0.45)) border-box;
+}
+
+.bordeGradiente::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--fondo-medio);
+}
+
+/* ----------------------------------------------------------------------- efectos */
+
+/* Sombra de color: el brillo que hace que algo parezca emitido y no pintado. */
+.brilloLima {
+  box-shadow:
+    0 0 0 1px rgba(204, 255, 0, 0.22),
+    0 18px 60px -18px rgba(204, 255, 0, 0.55);
+}
+
+.brilloMenta {
+  box-shadow:
+    0 0 0 1px rgba(0, 240, 200, 0.24),
+    0 20px 70px -20px rgba(0, 240, 200, 0.5);
+}
+
+/*
+ * Barrido de luz sobre el boton principal. Se dispara al pasar el mouse; con
+ * `translateX` de -150% a 150% la franja de luz cruza el boton una vez.
+ */
+.brilloBarrido {
+  position: relative;
+  overflow: hidden;
+}
+
+.brilloBarrido::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 45%;
+  height: 100%;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  transform: translateX(-150%);
+  transition: transform 0.65s ease-out;
+}
+
+.brilloBarrido:hover::after {
+  transform: translateX(320%);
+}
+
+/*
+ * El barrido del boton es un reflejo blanco: sobre fondo claro se pierde. En tema claro se
+ * oscurece apenas para que siga leyendose como brillo.
+ */
+html[data-tema='claro'] .brilloBarrido::after {
+  background: linear-gradient(100deg, transparent, rgba(15, 23, 42, 0.14), transparent);
+}
+
+/*
+ * Elevacion al pasar el mouse. `translate` y no `scale`: escalar una tarjeta con texto
+ * dentro desenlaza los caracteres y se ve borroso. Moverla no.
+ */
+.elevar {
+  transition:
+    transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.32s ease,
+    border-color 0.32s ease;
+}
+
+.elevar:hover {
+  transform: translateY(-6px);
+  border-color: var(--borde-vivo);
+  box-shadow: 0 26px 70px -28px rgba(204, 255, 0, 0.32);
+}
+
+/* Flotacion perpetual de las tarjetas del hero. */
+.flotar {
+  animation: flotar 9s ease-in-out infinite;
+}
+
+.flotarLento {
+  animation: flotar 11s ease-in-out infinite;
+  animation-delay: -4s;
+}
+
+@keyframes flotar {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-14px);
+  }
+}
+
+/* Punto de "vivo": el pulso que dice que algo esta pasando ahora. */
+.pulso {
+  position: relative;
+}
+
+.pulso::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: currentColor;
+  animation: onda 2.4s ease-out infinite;
+}
+
+@keyframes onda {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+/*
+ * Cinta de palabras que se desliza sin fin. El contenido va duplicado y la
+ * animacion recorre la mitad, que es justo lo que hace que el empalme caiga fuera de
+ * cuadro y el bucle no se vea.
+ */
+.cinta {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+  mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+}
+
+.cintaPista {
+  display: flex;
+  width: max-content;
+  animation: deslizar 34s linear infinite;
+}
+
+@keyframes deslizar {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Barra de progreso de un sobre, con degradado en vez de color plano. */
+.barra {
+  background-image: linear-gradient(90deg, var(--lima), var(--menta));
+  box-shadow: 0 0 18px -4px rgba(0, 240, 200, 0.65);
+}
+
+.barraAlerta {
+  background-image: linear-gradient(90deg, var(--ambar), var(--cobre));
+  box-shadow: 0 0 18px -4px rgba(255, 122, 69, 0.6);
+}
+
+/* Numero de paso, con el degradado detras del numero. */
+.paso {
+  background-image: linear-gradient(140deg, rgba(204, 255, 0, 0.22), rgba(0, 240, 200, 0.1));
+  border: 1px solid rgba(204, 255, 0, 0.3);
+}
+
+/* ------------------------------------------------------------------- interaccion */
+
+/*
+ * El foco visible se dibuja una sola vez, aqui, para todos los enlaces y botones de la
+ * portada. Un anillo de lima de 2px con separación: se ve sobre el fondo casi negro y
+ * sobre las tarjetas de vidrio, y no depende de que el elemento tenga su propio
+ * `focus-visible`, que se olvidaria uno de ellos.
+ */
+.portada :is(a, button):focus-visible {
+  outline: 2px solid var(--lima);
+  outline-offset: 3px;
+  border-radius: 0.5rem;
+}
+
+/*
+ * El resaltado de texto seleccionado va con prefijo de `.portada` a proposito. `::selection`
+ * sin scope es global en CSS aunque este archivo sea un modulo: lo dejaria lima en toda la
+ * aplicacion, no solo en la landing.
+ */
+.portada ::selection {
+  background-color: var(--lima);
+  color: var(--fondo);
+}
+
+/* Scroll suave para las anclas del header, compensando el alto de la barra. */
+.portada {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5.5rem;
+}
+
+/* -------------------------------------------------------------------- utilerias */
+
+/*
+ * Colores de la portada, expuestos como clases.
+ *
+ * No van en el `@theme` de `globals.css` a proposito: la paleta de la landing es
+ * propia y no debe quedar disponible para el resto de la app. Tailwind no genera
+ * utilidades para variables CSS de un modulo, asi que se declaran aqui y se usan
+ * como `estilos.textoLima`, que es lo unico que esta pagina necesita.
+ *
+ * La jerarquia es deliberada: `tinta` para lo que se lee, `tinta-media` para
+ * explicacion, `tinta-tenue` para notas al pie. Sobre el fondo casi negro los tres
+ * superan 4.5:1, asi que el cuerpo de texto cumple contraste AA.
+ */
+.textoTinta {
+  color: var(--tinta);
+}
+
+.textoMedia {
+  color: var(--tinta-media);
+}
+
+.textoTenue {
+  color: var(--tinta-tenue);
+}
+
+/* Los cuatro acentos. Cada uno conserva el significado que ya tienen en el producto. */
+.textoLima {
+  color: var(--lima);
+}
+
+.textoMenta {
+  color: var(--menta);
+}
+
+.textoAmbar {
+  color: var(--ambar);
+}
+
+.textoMagenta {
+  color: var(--magenta);
+}
+
+.textoRiesgo {
+  color: var(--riesgo);
+}
+
+/* Sobre el boton lima el texto va en el fondo, no en negro puro. */
+.textoFondo {
+  color: var(--fondo);
+}
+
+.fondoLima {
+  background-color: var(--lima);
+}
+
+/* Fondos tenues de un acento, para los iconos de las tarjetas. */
+.limaTenue {
+  background-color: rgba(204, 255, 0, 0.12);
+}
+
+.limaPunto {
+  background-color: rgba(204, 255, 0, 0.6);
+}
+
+.fondoCinta {
+  background-color: var(--cinta);
+}
+
+.bordeTenue {
+  border-color: var(--borde);
+}
+
+/* ------------------------------------------------------------------ adaptacion */
+
+/*
+ * El desenfoque y las manchas grandes son caros de pintar. En pantallas chicas, donde
+ * no hay superficie para que se noten y cada pixel cuenta, se apagan.
+ */
+@media (max-width: 767px) {
+  .portada {
+    --borde: var(--borde-vivo);
+  }
+
+  .aurora::before,
+  .aurora::after,
+  .aurora span {
+    filter: blur(58px);
+    opacity: 0.75;
+  }
+
+  .aurora::before {
+    width: 22rem;
+    height: 22rem;
+  }
+
+  .aurora::after {
+    width: 24rem;
+    height: 24rem;
+  }
+
+  .aurora span {
+    width: 24rem;
+    height: 24rem;
+  }
+}
+
+/*
+ * Accesibilidad: quien pidio menos movimiento no lo recibe.
+ *
+ * Las animaciones de esta pagina son puro adorno, asi que se pueden apagar todas sin
+ * perder un solo dato. Esta es la unica parte de la landing que no es negociable: el
+ * `prefers-reduced-motion` del sistema es una peticion del usuario, no una preferencia
+ * de diseno.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .portada *,
+  .portada *::before,
+  .portada *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* -------------------------------------------------------------------- tema claro */
+
+/*
+ * La portada iluminaba la escena con manchas y sombras de acento al 0.3-0.5 sobre negro. Sobre
+ * blanco esos valores queman y ensucian, asi que bajan de intensidad y las sombras de color se
+ * cambian por sombras de tinta.
+ */
+
+html[data-tema='claro'] .aurora::before {
+  background: radial-gradient(circle, rgba(77, 124, 15, 0.16), transparent 68%);
+}
+
+html[data-tema='claro'] .aurora::after {
+  background: radial-gradient(circle, rgba(13, 148, 136, 0.14), transparent 68%);
+}
+
+html[data-tema='claro'] .aurora span {
+  background: radial-gradient(circle, rgba(190, 24, 93, 0.1), transparent 70%);
+}
+
+html[data-tema='claro'] .bordeGradiente {
+  background:
+    linear-gradient(var(--fondo-medio), var(--fondo-medio)) padding-box,
+    linear-gradient(
+        140deg,
+        rgba(77, 124, 15, 0.5),
+        rgba(13, 148, 136, 0.42) 45%,
+        rgba(190, 24, 93, 0.45)
+      )
+      border-box;
+}
+
+html[data-tema='claro'] .brilloLima {
+  box-shadow:
+    0 0 0 1px rgba(77, 124, 15, 0.18),
+    0 18px 60px -18px rgba(15, 23, 42, 0.22);
+}
+
+html[data-tema='claro'] .brilloMenta {
+  box-shadow:
+    0 0 0 1px rgba(13, 148, 136, 0.2),
+    0 20px 70px -20px rgba(15, 23, 42, 0.22);
+}
+
+html[data-tema='claro'] .elevar:hover {
+  box-shadow: 0 26px 70px -28px rgba(15, 23, 42, 0.28);
+}
+
+html[data-tema='claro'] .barra {
+  box-shadow: 0 0 18px -4px rgba(13, 148, 136, 0.4);
+}
+
+html[data-tema='claro'] .barraAlerta {
+  box-shadow: 0 0 18px -4px rgba(194, 65, 12, 0.4);
+}
+
+html[data-tema='claro'] .paso {
+  background-image: linear-gradient(140deg, rgba(77, 124, 15, 0.14), rgba(13, 148, 136, 0.1));
+  border-color: rgba(77, 124, 15, 0.3);
+}
+
+html[data-tema='claro'] .limaTenue {
+  background-color: rgba(77, 124, 15, 0.12);
+}
+
+html[data-tema='claro'] .limaPunto {
+  background-color: rgba(77, 124, 15, 0.7);
+}

@@ -32,6 +32,7 @@ import {
 } from '../sobres/acciones'
 import { formatear } from '../dinero'
 import { Aviso, Boton, Campo } from './sesion'
+import detalle from './detalle.module.css'
 
 /**
  * Una asignacion tal como la ve la persona: periodo, importe y por que esta ahi.
@@ -78,12 +79,12 @@ function Selector({
   error?: string
 }) {
   return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-sm font-medium text-slate-700">{etiqueta}</span>
+    <label className={detalle.campo}>
+      <span className={detalle.etiqueta}>{etiqueta}</span>
       <select
         name={nombre}
         defaultValue={String(seleccionado ?? opciones[0]?.id ?? '')}
-        className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
+        className={detalle.selector}
       >
         {opciones.map((opcion) => (
           <option key={opcion.id} value={opcion.id}>
@@ -91,7 +92,7 @@ function Selector({
           </option>
         ))}
       </select>
-      {error ? <span className="text-xs text-red-700">{error}</span> : null}
+      {error ? <span className={detalle.errorLinea}>{error}</span> : null}
     </label>
   )
 }
@@ -110,7 +111,7 @@ export function FormularioNuevoSobre({
   )
 
   return (
-    <form action={accion} className="flex flex-col gap-4">
+    <form action={accion} className={detalle.formulario}>
       {estado.error ? <Aviso tono="error">{estado.error}</Aviso> : null}
       {estado.aviso ? <Aviso tono="exito">{estado.aviso}</Aviso> : null}
 
@@ -159,14 +160,14 @@ function FilaAsignacion({
   )
 
   return (
-    <li className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-      <div className="flex items-baseline justify-between gap-3">
-        <p className="text-xs text-slate-500">
+<li className={detalle.subItem}>
+      <div className={detalle.itemEncabezado}>
+        <p className={detalle.nota}>
           {asignacion.periodo} · {MOTIVO[asignacion.motivo]}
         </p>
         <p
-          className={`font-mono text-sm font-semibold tabular-nums ${
-            asignacion.motivo === 'reasignacion' ? 'text-amber-800' : 'text-slate-900'
+          className={`${detalle.itemValor} ${detalle.valorMedio} ${
+            asignacion.motivo === 'reasignacion' ? detalle.atencion : ''
           }`}
         >
           {formatear(asignacion.monto, moneda)}
@@ -177,22 +178,22 @@ function FilaAsignacion({
           sola descuadraria el disponible del sobre de destino, y el repositorio la
           rechaza. Se lo dice en pantalla en vez de esconderla. */}
       {asignacion.motivo === 'reasignacion' ? (
-        <p className="mt-1 text-xs text-slate-500">
+        <p className={detalle.nota}>
           Se corrige desde el sobre al que moviste el dinero.
         </p>
       ) : (
-        <form action={accion} className="mt-2 flex flex-wrap items-end gap-2">
+        <form action={accion} className={detalle.formularioEnLinea}>
           {estado.error ? (
-            <p role="alert" className="w-full text-xs text-red-700">
+            <p role="alert" className={detalle.errorLinea}>
               {estado.error}
             </p>
           ) : null}
           {estado.aviso ? (
-            <p role="status" className="w-full text-xs text-emerald-700">
+            <p role="status" className={detalle.exitoLinea}>
               {estado.aviso}
             </p>
           ) : null}
-          <div className="min-w-40 flex-1">
+          <div className={detalle.campoCrece}>
             <Campo
               nombre="monto"
               etiqueta="Importe de la asignacion"
@@ -281,24 +282,16 @@ export function FilaSobre({
   )
 
   return (
-    <li
-      className={`rounded-2xl border p-4 shadow-sm ${
-        negativo ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-white'
-      }`}
-    >
-      <div className="flex items-baseline justify-between gap-3">
-        <h4 className="font-semibold text-slate-900">{nombre}</h4>
-        <p
-          className={`font-mono text-lg font-semibold tabular-nums ${
-            negativo ? 'text-red-700' : 'text-slate-900'
-          }`}
-        >
+    <li className={`${detalle.item} ${negativo ? detalle.itemNegativo : ''}`}>
+      <div className={detalle.itemEncabezado}>
+        <h4 className={detalle.itemNombre}>{nombre}</h4>
+        <p className={`${detalle.itemValor} ${negativo ? detalle.negativo : ''}`}>
           {formatear(disponible, moneda)}
         </p>
       </div>
 
       {negativo ? (
-        <p className="mt-2 rounded-xl border border-red-200 bg-white px-3 py-2 text-sm text-red-800">
+        <p className={detalle.avisoNegativo}>
           Esta en negativo. Se puede tapar con el dinero suelto
           {dinero_suelto ? ` (${formatear(dinero_suelto, moneda)})` : ''}: el sistema no lo
           hace solo.
@@ -306,19 +299,19 @@ export function FilaSobre({
       ) : null}
 
       {/* Asignar: la operacion de todos los dias, a la vista. */}
-      <form action={accionAsignar} className="mt-3 flex flex-wrap items-end gap-2">
+      <form action={accionAsignar} className={detalle.formularioEnLinea}>
         <PeriodoOculto periodo={periodo} />
         {asignar.error ? (
-          <p role="alert" className="w-full text-sm text-red-700">
+          <p role="alert" className={detalle.error}>
             {asignar.error}
           </p>
         ) : null}
         {asignar.aviso ? (
-          <p role="status" className="w-full text-sm text-emerald-700">
+          <p role="status" className={detalle.exito}>
             {asignar.aviso}
           </p>
         ) : null}
-        <div className="min-w-40 flex-1">
+        <div className={detalle.campoCrece}>
           <Campo
             nombre="monto"
             etiqueta="Asignar"
@@ -329,26 +322,24 @@ export function FilaSobre({
         <AccionPendiente>Asignar</AccionPendiente>
       </form>
 
-      <details className="mt-3">
-        <summary className="cursor-pointer text-sm text-slate-500 hover:text-slate-900">
-          Otras acciones
-        </summary>
+      <details className={detalle.desplegable}>
+        <summary className={detalle.resumen}>Otras acciones</summary>
 
-        <div className="mt-3 flex flex-col gap-4">
+        <div className={detalle.formulario}>
           {negativo ? (
-            <form action={accionTapar} className="flex flex-wrap items-end gap-2">
+            <form action={accionTapar} className={detalle.formularioEnLinea}>
               <PeriodoOculto periodo={periodo} />
               {tapar.error ? (
-                <p role="alert" className="w-full text-sm text-red-700">
+                <p role="alert" className={detalle.error}>
                   {tapar.error}
                 </p>
               ) : null}
               {tapar.aviso ? (
-                <p role="status" className="w-full text-sm text-emerald-700">
+                <p role="status" className={detalle.exito}>
                   {tapar.aviso}
                 </p>
               ) : null}
-              <div className="min-w-40 flex-1">
+              <div className={detalle.campoCrece}>
                 <Campo
                   nombre="monto"
                   etiqueta="Tapar el desborde"
@@ -361,19 +352,19 @@ export function FilaSobre({
           ) : null}
 
           {otrosSobres.length > 0 ? (
-            <form action={accionMover} className="flex flex-wrap items-end gap-2">
+            <form action={accionMover} className={detalle.formularioEnLinea}>
               <PeriodoOculto periodo={periodo} />
               {mover.error ? (
-                <p role="alert" className="w-full text-sm text-red-700">
+                <p role="alert" className={detalle.error}>
                   {mover.error}
                 </p>
               ) : null}
               {mover.aviso ? (
-                <p role="status" className="w-full text-sm text-emerald-700">
+                <p role="status" className={detalle.exito}>
                   {mover.aviso}
                 </p>
               ) : null}
-              <div className="min-w-40 flex-1">
+              <div className={detalle.campoCrece}>
                 <Campo nombre="monto" etiqueta="Mover desde aca" error={mover.campos?.monto} />
               </div>
               <Selector
@@ -386,16 +377,14 @@ export function FilaSobre({
             </form>
           ) : null}
 
-          <div className="flex flex-col gap-2">
-            <h5 className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
-              Asignaciones de este sobre
-            </h5>
+          <div className={detalle.bloque}>
+            <h5 className={detalle.rotuloInterno}>Asignaciones de este sobre</h5>
             {asignaciones.length === 0 ? (
-              <p className="text-xs text-slate-500">
+              <p className={detalle.nota}>
                 Este sobre todavia no tiene asignaciones. Su disponible esta en cero.
               </p>
             ) : (
-              <ul className="flex flex-col gap-2">
+              <ul className={detalle.lista}>
                 {asignaciones.map((asignacion) => (
                   <FilaAsignacion
                     key={asignacion.id}
@@ -409,38 +398,38 @@ export function FilaSobre({
             )}
           </div>
 
-          <form action={accionRenombrar} className="flex flex-wrap items-end gap-2">
+          <form action={accionRenombrar} className={detalle.formularioEnLinea}>
             {renombrar.error ? (
-              <p role="alert" className="w-full text-sm text-red-700">
+              <p role="alert" className={detalle.error}>
                 {renombrar.error}
               </p>
             ) : null}
             {renombrar.aviso ? (
-              <p role="status" className="w-full text-sm text-emerald-700">
+              <p role="status" className={detalle.exito}>
                 {renombrar.aviso}
               </p>
             ) : null}
-            <div className="min-w-40 flex-1">
+            <div className={detalle.campoCrece}>
               <Campo nombre="nombre" etiqueta="Renombrar" error={renombrar.campos?.nombre} />
             </div>
             <AccionPendiente>Renombrar</AccionPendiente>
           </form>
 
-          <form action={accionReordenar} className="flex flex-wrap items-end gap-2">
+          <form action={accionReordenar} className={detalle.formularioEnLinea}>
             {reordenar.error ? (
-              <p role="alert" className="w-full text-sm text-red-700">
+              <p role="alert" className={detalle.error}>
                 {reordenar.error}
               </p>
             ) : null}
-            <div className="min-w-40 flex-1">
+            <div className={detalle.campoCrece}>
               <Campo nombre="orden" etiqueta="Orden" error={reordenar.campos?.orden} />
             </div>
             <AccionPendiente>Reordenar</AccionPendiente>
           </form>
 
-          <form action={accionGrupo} className="flex flex-wrap items-end gap-2">
+          <form action={accionGrupo} className={detalle.formularioEnLinea}>
             {cambiarGrupo.error ? (
-              <p role="alert" className="w-full text-sm text-red-700">
+              <p role="alert" className={detalle.error}>
                 {cambiarGrupo.error}
               </p>
             ) : null}
@@ -454,37 +443,37 @@ export function FilaSobre({
             <AccionPendiente>Cambiar de grupo</AccionPendiente>
           </form>
 
-          <div className="flex flex-wrap gap-2">
+          <div className={detalle.acciones}>
             <form action={accionArchivar}>
               <PeriodoOculto periodo={periodo} />
               {archivar.error ? (
-                <p role="alert" className="text-sm text-red-700">
+                <p role="alert" className={detalle.error}>
                   {archivar.error}
                 </p>
               ) : null}
               {archivar.aviso ? (
-                <p role="status" className="text-sm text-emerald-700">
+                <p role="status" className={detalle.exito}>
                   {archivar.aviso}
                 </p>
               ) : null}
-              <BotonSinMargen>Archivar</BotonSinMargen>
+              <Boton>Archivar</Boton>
             </form>
 
             <form action={accionEliminar}>
               <PeriodoOculto periodo={periodo} />
               {eliminar.error ? (
-                <p role="alert" className="text-sm text-red-700">
+                <p role="alert" className={detalle.error}>
                   {eliminar.error}
                 </p>
               ) : null}
               {eliminar.aviso ? (
-                <p role="status" className="text-sm text-emerald-700">
+                <p role="status" className={detalle.exito}>
                   {eliminar.aviso}
                 </p>
               ) : null}
-              <BotonSinMargen>Borrar</BotonSinMargen>
+              <Boton>Borrar</Boton>
               {eliminar.ofrece === 'archivar' ? (
-                <p className="mt-1 text-xs text-slate-600">
+                <p className={detalle.nota}>
                   Archivalo en su lugar: conserva el historial y sigue admitiendo devoluciones.
                 </p>
               ) : null}
@@ -492,28 +481,13 @@ export function FilaSobre({
           </div>
 
           {!eliminable ? (
-            <p className="text-xs text-slate-500">
+            <p className={detalle.nota}>
               Este sobre no se puede borrar: tiene movimientos o saldo. Archivarlo conserva todo.
             </p>
           ) : null}
         </div>
       </details>
     </li>
-  )
-}
-
-/** Como `Boton`, pero sin el margen de arriba: aca los botones van en linea. */
-function BotonSinMargen({ children }: { children: React.ReactNode }) {
-  const { pending } = useFormStatus()
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      aria-busy={pending}
-      className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
-    >
-      {pending ? 'Un momento...' : children}
-    </button>
   )
 }
 
@@ -540,30 +514,26 @@ export function FilaSobreArchivado({
   )
 
   return (
-    <li
-      className={`flex items-center justify-between gap-3 rounded-xl border p-3 ${
-        enNegativo ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-white'
-      }`}
-    >
+    <li className={`${detalle.item} ${detalle.filaCompacta} ${enNegativo ? detalle.itemNegativo : ''}`}>
       <div>
-        <p className="text-sm font-medium text-slate-900">{nombre}</p>
-        <p className="font-mono text-sm text-slate-600 tabular-nums">
+        <p className={detalle.itemNombre}>{nombre}</p>
+        <p className={`${detalle.itemDetalle} ${detalle.valorChico}`}>
           {formatear(disponible, moneda)}
         </p>
       </div>
-      <form action={accionRestaurar} className="flex flex-col items-end">
+      <form action={accionRestaurar} className={detalle.alineadoDerecha}>
         <PeriodoOculto periodo={periodo} />
         {restaurar.error ? (
-          <p role="alert" className="text-xs text-red-700">
+          <p role="alert" className={detalle.errorLinea}>
             {restaurar.error}
           </p>
         ) : null}
         {restaurar.aviso ? (
-          <p role="status" className="text-xs text-emerald-700">
+          <p role="status" className={detalle.exitoLinea}>
             {restaurar.aviso}
           </p>
         ) : null}
-        <BotonSinMargen>Restaurar</BotonSinMargen>
+        <Boton>Restaurar</Boton>
       </form>
     </li>
   )

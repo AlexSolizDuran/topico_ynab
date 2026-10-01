@@ -9,15 +9,15 @@ Finanzas personales con sobres de presupuesto ( budgeting estilo YNAB ). Un
 repositorio **sin código**: solo diseño. No hay `package.json`, ni `src/`, ni
 dependencias. El trabajo de implementación todavía no empieza.
 
-El diseño está expresado como un OpenSpec de 12 capacidades.
+El diseño está expresado como un OpenSpec de 13 capacidades.
 
 ## Estado del OpenSpec
 
 | | |
 |---|---|
-| Capacidades | 12 |
-| Requisitos | 78 |
-| Escenarios | 257 |
+| Capacidades | 13 |
+| Requisitos | 87 |
+| Escenarios | 273 |
 | Validado | contra las reglas del schema `spec-driven` |
 
 `openspec/specs/<capacidad>/spec.md` es la fuente de verdad. La estructura de
@@ -28,7 +28,7 @@ cada spec es fija: `## Purpose`, luego `## Requirements`, y dentro
 Las capacidades son: `autenticacion` (7), `carteras` (5), `cuentas` (6),
 `grupos` (3), `sobres` (11), `transacciones` (10), `traspasos` (4),
 `recurrencias` (5), `metas` (6), `patrimonio` (4), `panel` (13),
-`comparativos` (4).
+`comparativos` (4), `resumen` (9).
 
 **Los specs son neutrales de stack a propósito.** No mencionan languages,
 frameworks, base de datos ni nombres de tabla, para sobrevivir a un cambio de
@@ -134,6 +134,7 @@ Derivado de las dependencias del modelo de datos, no del tamaño. `panel` y
 | 10 | `100-patrimonio` | patrimonio | 4 |
 | 11 | `110-panel` | panel | 13 |
 | 12 | `120-comparativos` | comparativos | 4 |
+| 13 | `130-resumen` | resumen | 9 |
 
 El prefijo numérico ordena el `openspec list`.
 
@@ -177,7 +178,7 @@ No contradigas los specs. En resumen:
 - Se permiten varias metas históricas, pero una sola activa.
 - Un traspaso puede tener una sola pata, con aviso.
 - Cada cartera tiene una moneda y no hay conversión. El panel muestra una
-  cartera y nunca mezcla dos.
+  cartera y nunca mezcla dos; el resumen agrupa por moneda y tampoco mezcla.
 
 Fuera de alcance: conciliación bancaria, CSV, LLM, respaldos, meses futuros,
 autoasignación, plantillas, deuda compartida, adjuntos, notificaciones,

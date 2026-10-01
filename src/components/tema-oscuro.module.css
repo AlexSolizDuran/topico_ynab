@@ -1,0 +1,528 @@
+/*
+ * Tema oscuro compartido: tokens, fondo del shell y formato de las primitivas.
+ *
+ * Existe para que las cuatro pantallas oscuras —portada, entrar, crear cuenta y panel— no
+ * tengan cada una su copia de la paleta. Cuando eran dos, el duplicado se justificaba; con
+ * cuatro, un cambio de color obliga a tocar cuatro archivos y es facil olvidar uno. Ahora
+ * `ccff00` esta escrito una sola vez, aca.
+ *
+ * Se aplica con UNA clase, `.oscuro`, que cada vista pone en su elemento raiz. Esa clase
+ * cumple dos papeles a la vez:
+ *
+ *  1. Marcador de presencia. `body:has(.oscuro)` apaga el fondo claro y la barra de
+ *     navegacion que aportan `app/layout.tsx` y `(app)/layout.tsx`, que son compartidos con
+ *     las pantallas que todavia no se migraron. `:has()` es lo que lo permite sin tocar el
+ *     layout: el layout no sabe que ruta se esta pintando.
+ *
+ *  2. Ancla de las reglas de primitivas. Los campos, botones y avisos los dibuja
+ *     `components/sesion.tsx` con clases claras de Tailwind que las pantallas de producto
+ *     siguen usando. `.oscuro :is(input, select)` las repinta por descendencia en vez de
+ *     duplicar `Campo`, `Boton` y `Aviso` en una version oscura que se desincroniza al
+ *     primer cambio. Los selectores de clase ganan a las utilidades sueltas por
+ *     especificidad, asi que no depende del orden de importacion.
+ *
+ * NO va en `globals.css` a proposito. Alli los tokens serian globales y las pantallas claras
+ * de carteras, comparativos y perfil los leerian por accidente. Acertados en `.oscuro`, solo
+ * existen dentro de una pantalla oscura.
+ *
+ * Cuando las pantallas claras se migren, este bloque sube a `globals.css`, la clase
+ * `.oscuro` desaparece y las primitivas de `sesion.tsx` adoptan estos colores directamente.
+ */
+
+/* ------------------------------------------------------------------------- tokens */
+
+body:has(.oscuro) {
+  --fondo: #07080b;
+  --fondo-medio: #0b0d12;
+  --superficie: rgba(255, 255, 255, 0.035);
+  --superficie-alta: rgba(255, 255, 255, 0.07);
+  --borde: rgba(255, 255, 255, 0.08);
+  --borde-vivo: rgba(255, 255, 255, 0.16);
+
+  --tinta: #f4f6fa;
+  --tinta-media: #a9b1bf;
+  --tinta-tenue: #717a89;
+
+  --lima: #ccff00;
+  --lima-suave: #e6ff6e;
+  --menta: #00f0c8;
+  --ambar: #ffb020;
+  --cobre: #ff7a45;
+  --magenta: #ff3d81;
+  --riesgo: #ff5468;
+
+  /*
+   * Tintes, velos y cintas que antes iban como literales `rgba(...)` repartidos por las hojas
+   * de cada pantalla. Viven aca para que el tema claro los pueda invertir sin tocar cada regla.
+   * Los valores son EXACTAMENTE los que ya usaban, asi que girar el tema no cambia la version
+   * oscura.
+   */
+  --tinte-1: rgba(255, 255, 255, 0.02);
+  --tinte-2: rgba(255, 255, 255, 0.035);
+  --tinte-3: rgba(255, 255, 255, 0.05);
+  --tinte-4: rgba(255, 255, 255, 0.07);
+  --trazo-suave: rgba(255, 255, 255, 0.04);
+  --control: rgba(255, 255, 255, 0.04);
+  --control-foco: rgba(255, 255, 255, 0.06);
+  --velo: rgba(7, 8, 11, 0.4);
+  --cinta: rgba(7, 8, 11, 0.82);
+  --cinta-hover: rgba(255, 255, 255, 0.11);
+
+  background-color: transparent;
+  /* Cualquier texto sin clase propia cae en tinta clara, no en la del body. */
+  color: var(--tinta-media);
+}
+
+/*
+ * Tema claro.
+ *
+ * No hay un segundo juego de reglas por pantalla: todas las hojas leen `var(--fondo)`,
+ * `var(--tinta)`, etc., asi que redefinir los mismos tokens alcanza para que el arbol entero se
+ * invierta. El selector lleva `data-tema='claro'` en `<html>` (lo pone el boton) y la clase
+ * `.oscuro` que ya tienen las pantallas, y gana al bloque oscuro por especificidad.
+ *
+ * Los acentos se oscurecen en vez de intercambiarse por azul: el lima y la menta de la marca no
+ * se leen sobre blanco, pero conservar el tono mantiene la identidad entre los dos temas.
+ */
+html[data-tema='claro'] body:has(.oscuro) {
+  --fondo: #f6f7fb;
+  --fondo-medio: #eceef4;
+  --superficie: rgba(15, 23, 42, 0.035);
+  --superficie-alta: rgba(15, 23, 42, 0.06);
+  --borde: rgba(15, 23, 42, 0.1);
+  --borde-vivo: rgba(15, 23, 42, 0.18);
+
+  --tinta: #0f172a;
+  --tinta-media: #475569;
+  --tinta-tenue: #64748b;
+
+  --lima: #4d7c0f;
+  --lima-suave: #65a30d;
+  --menta: #0d9488;
+  --ambar: #b45309;
+  --cobre: #c2410c;
+  --magenta: #be185d;
+  --riesgo: #dc2626;
+
+  --tinte-1: rgba(15, 23, 42, 0.02);
+  --tinte-2: rgba(15, 23, 42, 0.03);
+  --tinte-3: rgba(15, 23, 42, 0.05);
+  --tinte-4: rgba(15, 23, 42, 0.08);
+  --trazo-suave: rgba(15, 23, 42, 0.05);
+  --control: rgba(15, 23, 42, 0.03);
+  --control-foco: rgba(15, 23, 42, 0.05);
+  --velo: rgba(255, 255, 255, 0.55);
+  --cinta: rgba(246, 247, 251, 0.85);
+  --cinta-hover: rgba(15, 23, 42, 0.08);
+
+  color: var(--tinta-media);
+}
+
+/* --------------------------------------------------------------------------- aurora */
+
+/*
+ * Los dos blobs de fondo, compartidos por todas las pantallas oscuras.
+ *
+ * Estaban duplicados en `panel.module.css`, `producto.module.css` y `carteras.module.css` con
+ * medidas distintas (36/34rem en el panel, 34rem en producto, 30/26rem en carteras), asi que la
+ * misma decoracion se leia como tres decisiones. Se fija aca una sola: el panel es la pantalla
+ * mas densa y su version era la de mas presencia, asi que es la que manda.
+ *
+ * `.aurora` va con `inset: 0` y `overflow: hidden` porque los blobs se salen del contenedor a
+ * proposito: los circulos recortados por los bordes de la caja se ven como manchas, no como
+ * luz difusa. El `z-index` negativo los manda detras del contenido, y por eso el contenedor que
+ * los lleva necesita `isolation: isolate` o se cuelan por debajo del fondo del body.
+ */
+.aurora {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.aurora::before,
+.aurora::after {
+  content: '';
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+}
+
+.aurora::before {
+  top: -14rem;
+  right: -10rem;
+  width: 36rem;
+  height: 36rem;
+  background: radial-gradient(circle, rgba(204, 255, 0, 0.16), transparent 68%);
+}
+
+.aurora::after {
+  bottom: -16rem;
+  left: -12rem;
+  width: 34rem;
+  height: 34rem;
+  background: radial-gradient(circle, rgba(0, 240, 200, 0.12), transparent 68%);
+}
+
+/*
+ * Grilla de fondo, compartida por todas las pantallas oscuras.
+ *
+ * Es la misma idea del aurora —dar textura al vacio y escala al hero— pero con lineas de 1px
+ * cada 64px. Existia solo en la portada (opacidad 0.045) y en las pantallas de sesion (0.08
+ * mas un `opacity: 0.4`, que la hacia bastante mas marcada); el resto no la tenia. Se unifica
+ * aca y se baja a 0.022: a ese nivel se percibe como textura fina y deja de leerse como
+ * cuadrados.
+ *
+ * La mascara radial la desvanece hacia abajo, asi que solo se insinua en la franja superior y
+ * no compite con el contenido. `z-index: -1` la manda detras, por lo que el contenedor que la
+ * lleva necesita `isolation: isolate`; el orden en el DOM la deja por debajo del aurora.
+ */
+.rejilla {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 64px 64px;
+  -webkit-mask-image: radial-gradient(ellipse 100% 55% at 50% 0%, black, transparent 80%);
+  mask-image: radial-gradient(ellipse 100% 55% at 50% 0%, black, transparent 80%);
+}
+
+/* ------------------------------------------------------------------------- grano */
+
+/*
+ * Grano de pelicula, compartido por todas las pantallas oscuras.
+ *
+ * Es la textura que hace que los degradados del aurora no se vean como vectores planos, y por
+ * eso acompania al aurora en cada pantalla. Estaba en el panel (160px, opacidad 0.4), en la
+ * portada (180px, opacidad 0.4 mas `mix-blend-mode: overlay`) y en las pantallas de sesion
+ * (140px, opacidad 0.5): la misma textura con tres recetas. Se unifica aca con la del panel,
+ * que es la que el resto tiene que imitar.
+ *
+ * Es una textura SVG de `feTurbulence` repetida, en `data-uri` para no sumar un archivo binario
+ * al repositorio. `z-index: -1` la deja por debajo del contenido pero por encima del aurora,
+ * segun el orden en el DOM.
+ */
+.grano {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.4;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23g)' opacity='0.4'/%3E%3C/svg%3E");
+}
+
+/* ---------------------------------------------------------------- fondo del shell */
+
+html:has(.oscuro) {
+  background-color: #07080b;
+}
+
+/* El wrapper de `(app)/layout.tsx` pinta `bg-lienzo`; que no tape el fondo oscuro. */
+body:has(.oscuro) > div {
+  background-color: transparent;
+}
+
+/* --------------------------------------------------------------------------- nav */
+
+body:has(.oscuro) header {
+  background-color: var(--cinta);
+  border-color: var(--borde-vivo);
+  backdrop-filter: blur(16px);
+}
+
+/* La marca del nav va en tinta; el resto de enlaces, en tinta media. */
+body:has(.oscuro) header a {
+  color: var(--tinta-media);
+}
+
+body:has(.oscuro) header a:first-child {
+  color: var(--tinta);
+}
+
+body:has(.oscuro) header a:hover {
+  color: var(--lima);
+}
+
+body:has(.oscuro) header button {
+  border-color: var(--borde-vivo);
+  background-color: var(--superficie-alta);
+  color: var(--tinta-media);
+}
+
+body:has(.oscuro) header button:hover {
+  background-color: var(--cinta-hover);
+}
+
+/*
+ * Boton de tema. Va con estilos propios para verse igual en el nav, en la portada y en las
+ * pantallas de sesion, donde no hay un `header` que lo alcance. Usa los mismos tokens que el
+ * resto de la paleta, asi que se da vuelta solo al cambiar de tema.
+ */
+.botonTema {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid var(--borde-vivo);
+  border-radius: 0.75rem;
+  background-color: var(--superficie-alta);
+  color: var(--tinta-media);
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.botonTema:hover {
+  background-color: var(--cinta-hover);
+  color: var(--lima);
+}
+
+/* ------------------------------------------------------------------ primitivas */
+
+.oscuro :is(label) {
+  color: var(--tinta-media);
+}
+
+.oscuro :is(input, select) {
+  border: 1px solid var(--borde);
+  border-radius: 0.75rem;
+  background-color: var(--control);
+  color: var(--tinta);
+  /*
+   * Padding y tipografia explicitos, no heredados.
+   *
+   * `Campo` los trae por Tailwind (`px-3.5 py-2.5 text-base`), pero un `<select>` suelto —el de
+   * moneda en carteras, los de comparativos— no tenia ninguno: usaba el padding y el font-size
+   * por defecto del navegador, y quedaba visiblemente mas bajo que el input de al lado. Puesto
+   * aca, la regla cubre a los dos y el select calza con el input sin clases extra en el JSX.
+   *
+   * Los valores son los mismos que ya usaba `Campo` (0.875rem / 0.625rem / 1rem), asi que en los
+   * inputs no cambia nada: la regla del tema les gana a las utilidades de Tailwind por
+   * especificidad y repite el mismo resultado.
+   */
+  padding: 0.625rem 0.875rem;
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.5rem;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.oscuro :is(input, select):hover {
+  border-color: var(--borde-vivo);
+}
+
+/*
+ * El anillo de foco es el mismo lima en las cuatro pantallas: el foco no cambia de color al
+ * moverse de la portada al formulario.
+ */
+.oscuro :is(input, select):focus {
+  outline: none;
+  border-color: var(--lima);
+  background-color: var(--control-foco);
+  box-shadow: 0 0 0 3px rgba(204, 255, 0, 0.18);
+}
+
+/* El desplegable nativo pinta su lista en claro si no se le fuerza el fondo. */
+.oscuro select option {
+  background-color: var(--fondo-medio);
+  color: var(--tinta);
+}
+
+.oscuro input::placeholder {
+  color: var(--tinta-tenue);
+}
+
+/* El boton principal conserva su forma y su margen: solo cambian los colores. */
+.oscuro button[type='submit'] {
+  border: 0;
+  background-image: linear-gradient(120deg, var(--lima), #b6ea00);
+  color: var(--fondo);
+  font-weight: 700;
+  box-shadow:
+    0 0 0 1px rgba(204, 255, 0, 0.3),
+    0 16px 40px -16px rgba(204, 255, 0, 0.5);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.oscuro button[type='submit']:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 0 1px rgba(204, 255, 0, 0.4),
+    0 20px 46px -16px rgba(204, 255, 0, 0.62);
+}
+
+.oscuro button[type='submit']:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+}
+
+/*
+ * Error y exito se distinguen por color Y por el rol `alert` / `status`. No alcanza con
+ * pintar el fondo: el color solo no llega a quien no distingue rojo y verde, y estos son
+ * justamente los unicos estados que estos formularios pueden mostrar.
+ */
+.oscuro [role='alert'] {
+  border: 1px solid rgba(255, 84, 104, 0.42);
+  border-radius: 0.75rem;
+  background-color: rgba(255, 84, 104, 0.1);
+  color: #ffa3ae;
+}
+
+.oscuro [role='status'] {
+  border: 1px solid rgba(0, 240, 200, 0.4);
+  border-radius: 0.75rem;
+  background-color: rgba(0, 240, 200, 0.09);
+  color: #7df5e0;
+}
+
+/* Error de un campo concreto: el texto y el borde, no solo un fondo rosado. */
+.oscuro input[aria-invalid='true'] {
+  border-color: rgba(255, 84, 104, 0.6);
+}
+
+.oscuro input[aria-invalid='true']:focus {
+  border-color: var(--riesgo);
+  box-shadow: 0 0 0 3px rgba(255, 84, 104, 0.2);
+}
+
+/* La ayuda se apaga para no competir con el campo. */
+.oscuro :is(p[id$='-ayuda'], span[id$='-ayuda']) {
+  color: var(--tinta-tenue);
+}
+
+.oscuro :is(p[id$='-error'], span[id$='-error']) {
+  color: #ff9aa6;
+}
+
+/* El indicador nativo del calendario es un glifo oscuro: invertido para que se vea. */
+.oscuro ::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: 0.6;
+}
+
+/* ------------------------------------------------------------------ foco global */
+
+.oscuro :is(a, button, input, select, summary):focus-visible {
+  outline: 2px solid var(--lima);
+  outline-offset: 2px;
+  border-radius: 0.35rem;
+}
+
+/*
+ * `::selection` sin prefijo es global en CSS aunque el archivo sea un modulo: lo dejaria
+ * lima en toda la aplicacion. Va con `.oscuro` adelante por eso.
+ */
+.oscuro ::selection {
+  background-color: var(--lima);
+  color: var(--fondo);
+}
+
+/* -------------------------------------------------------------------- tema claro */
+
+/*
+ * El bloque de tokens de arriba ya invierte casi todo, pero hay un punado de reglas donde el
+ * color iba escrito a mano: el negro del lienzo, las lineas de la rejilla, el anillo de foco y
+ * los acentos de error y exito. Estas son sus versiones claras.
+ */
+
+html[data-tema='claro']:has(.oscuro) {
+  background-color: #f6f7fb;
+}
+
+/* La rejilla era blanca translucida; sobre fondo claro tiene que ser tinta. */
+html[data-tema='claro'] .rejilla {
+  background-image:
+    linear-gradient(to right, rgba(15, 23, 42, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.05) 1px, transparent 1px);
+}
+
+/* El grano es ruido gris: a la misma opacidad ensucia demasiado un fondo claro. */
+html[data-tema='claro'] .grano {
+  opacity: 0.22;
+}
+
+/* Las manchas del fondo tambien se apagan: sobre blanco, a la misma intensidad, queman. */
+html[data-tema='claro'] .aurora::before {
+  background: radial-gradient(circle, rgba(77, 124, 15, 0.12), transparent 68%);
+}
+
+html[data-tema='claro'] .aurora::after {
+  background: radial-gradient(circle, rgba(13, 148, 136, 0.1), transparent 68%);
+}
+
+/* El anillo de foco sigue el acento, que en claro es oliva. */
+html[data-tema='claro'] .oscuro :is(input, select):focus {
+  box-shadow: 0 0 0 3px rgba(77, 124, 15, 0.18);
+}
+
+/* El boton principal: lima brillante con texto oscuro no se lee sobre blanco. */
+html[data-tema='claro'] .oscuro button[type='submit'] {
+  background-image: linear-gradient(120deg, var(--lima), var(--lima-suave));
+  color: #f8fafc;
+  box-shadow:
+    0 0 0 1px rgba(77, 124, 15, 0.3),
+    0 16px 40px -16px rgba(77, 124, 15, 0.45);
+}
+
+html[data-tema='claro'] .oscuro button[type='submit']:hover:not(:disabled) {
+  box-shadow:
+    0 0 0 1px rgba(77, 124, 15, 0.4),
+    0 20px 46px -16px rgba(77, 124, 15, 0.55);
+}
+
+html[data-tema='claro'] .oscuro [role='alert'] {
+  border-color: rgba(220, 38, 38, 0.4);
+  background-color: rgba(220, 38, 38, 0.08);
+  color: #b91c1c;
+}
+
+html[data-tema='claro'] .oscuro [role='status'] {
+  border-color: rgba(13, 148, 136, 0.4);
+  background-color: rgba(13, 148, 136, 0.08);
+  color: #0f766e;
+}
+
+html[data-tema='claro'] .oscuro input[aria-invalid='true'] {
+  border-color: rgba(220, 38, 38, 0.55);
+}
+
+html[data-tema='claro'] .oscuro input[aria-invalid='true']:focus {
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.18);
+}
+
+html[data-tema='claro'] .oscuro :is(p[id$='-error'], span[id$='-error']) {
+  color: #b91c1c;
+}
+
+/* El glifo del calendario venia invertido para el fondo negro. */
+html[data-tema='claro'] .oscuro ::-webkit-calendar-picker-indicator {
+  filter: none;
+}
+
+/* -------------------------------------------------------------------- animacion */
+
+@media (prefers-reduced-motion: reduce) {
+  .oscuro *,
+  .oscuro *::before,
+  .oscuro *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

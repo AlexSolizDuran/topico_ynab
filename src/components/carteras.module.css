@@ -1,0 +1,310 @@
+/*
+ * Formato de la pantalla de carteras.
+ *
+ * La paleta, el fondo del shell, la barra de navegacion y las primitivas de formulario
+ * (`Campo`, `Boton`, `Aviso`) NO estan aca: los aporta `tema-oscuro.module.css` y se activan
+ * con la clase `oscuro` que esta vista pone en su contenedor. Aca solo lo propio.
+ *
+ * La idea es que esta pantalla se lea como un indice, no como una pila de tarjetas. Antes cada
+ * cartera era una caja blanca con sombra y un boton "Entrar" a la derecha; con cinco carteras
+ * eso son cinco bloques con borde y sombra compitiendo, y el nombre de cada una —lo unico que
+ * se busca en esta pantalla— queda perdido en el medio.
+ *
+ * Acá las carteras son filas separadas por un filete, como un indice: el nombre manda, la
+ * moneda va al lado como dato de referencia y la accion queda a la derecha. El separador hace
+ * de agrupador y asi se puede quitar la caja, que es lo que libera el espacio. La densidad
+ * sale de la estructura; la tipografia no se achica.
+ *
+ * R2 del spec: las carteras no se suman entre si porque cada una tiene su moneda y el sistema
+ * no tiene tipo de cambio. Por eso el selector de cartera persistente llega con `110-panel` y
+ * aca no hay ningun total: cada fila se presenta sola, con su moneda a la vista.
+ */
+
+/* --------------------------------------------------------------------- contenedor */
+
+/* Mismo padding que `panel.module.css` y `producto.module.css`: 1.75rem arriba y 3.5rem abajo.
+   Antes carteras usaba 2rem/4rem, mas que ninguna otra pantalla, y las tres pantallas internas
+   de `(app)` quedaban con margenes distintos entre si. */
+.carteras {
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 1.75rem 1rem 3.5rem;
+  background-color: var(--fondo);
+  color: var(--tinta-media);
+  font-size: 0.9375rem;
+}
+
+.contenido {
+  position: relative;
+  margin-inline: auto;
+  width: 100%;
+  max-width: 46rem;
+}
+
+/* ------------------------------------------------------------------------ aurora */
+
+/* El aurora se comparte en `tema-oscuro.module.css` para que todas las pantallas oscuras
+   usen la misma decoracion. */
+
+/* ------------------------------------------------------------------------ cabecera */
+
+.titulo {
+  margin: 0;
+  font-size: 1.875rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--tinta);
+}
+
+.bajada {
+  margin: 0.5rem 0 0;
+  max-width: 34rem;
+  font-size: 0.875rem;
+  color: var(--tinta-tenue);
+}
+
+/* -------------------------------------------------------------------------- listas */
+
+.lista {
+  margin: 1.75rem 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--borde);
+}
+
+/*
+ * El filete es el agrupador. Va en `border-bottom` y el ultimo se la lleva por completo: si
+ * queda, la lista parece una caja que se cerro mal.
+ */
+/*
+ * `flex-wrap` mas `.pie` con `flex-basis: 100%` es lo que hace que la fila tenga dos niveles
+ * sin cambiar a `display: grid`: nombre y accion conviven en la primera linea, y los avisos y
+ * el desplegable de editar caen abajo, en su propia fila y a todo el ancho. Con `grid` habria
+ * que nombrar areas para dos niveles, y eso se lee peor que esto.
+ */
+.item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  padding: 0.875rem 0.25rem;
+  border-bottom: 1px solid var(--borde);
+}
+
+.pie {
+  flex-basis: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.item:last-child {
+  border-bottom: 0;
+}
+
+.itemInfo {
+  min-width: 0;
+}
+
+.itemNombre {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--tinta);
+  overflow-wrap: anywhere;
+}
+
+/*
+ * La moneda va en su propia caja para que se lea como codigo, no como parte del nombre. Es el
+ * dato que impide sumar las carteras, asi que tiene que estar a la vista, no escondida.
+ */
+.itemMoneda {
+  display: inline-block;
+  margin-top: 0.25rem;
+  padding: 0.1rem 0.4rem;
+  border: 1px solid var(--borde);
+  border-radius: 0.35rem;
+  font-family: var(--font-cifra);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  color: var(--tinta-tenue);
+}
+
+.itemMeta {
+  margin: 0.4rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--tinta-tenue);
+}
+
+/* ------------------------------------------------------------------------ acciones */
+
+.entrar {
+  flex-shrink: 0;
+  padding: 0.5rem 1rem;
+  border-radius: 0.6rem;
+  background-color: var(--superficie-alta);
+  border: 1px solid var(--borde-vivo);
+  color: var(--tinta);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.entrar:hover {
+  border-color: var(--lima);
+  background-color: rgba(204, 255, 0, 0.12);
+  color: var(--lima);
+}
+
+/* Las acciones secundarias se mantienen discretas: no compiten con "Entrar". */
+.detalles {
+  margin-top: 0.625rem;
+}
+
+.resumen {
+  cursor: pointer;
+  font-size: 0.75rem;
+  color: var(--tinta-tenue);
+  transition: color 0.2s ease;
+}
+
+.resumen:hover {
+  color: var(--tinta-media);
+}
+
+.acciones {
+  margin-top: 0.75rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--borde);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+/*
+ * Renombrar es un campo y un boton en linea. Va en grid y no en flex para que el boton tome
+ * su ancho natural sin tener que alcanzan al primer hijo con un selector: `Campo` ya es el
+ * track elástico.
+ */
+.acciones form {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  width: 100%;
+  max-width: 26rem;
+}
+
+/* ------------------------------------------------------------------------ secciones */
+
+.seccion {
+  margin-top: 2.75rem;
+}
+
+.tituloSeccion {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tinta-tenue);
+}
+
+.nueva {
+  margin-top: 0.875rem;
+  padding: 1.5rem;
+  border: 1px solid var(--borde);
+  border-radius: 1rem;
+  background-color: var(--superficie);
+}
+
+.nuevaTitulo {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--tinta);
+}
+
+.nuevaBajada {
+  margin: 0.375rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--tinta-tenue);
+}
+
+/*
+ * Nombre y moneda van en la misma fila: son los dos datos que hacen una cartera, y ninguno
+ * depende del otro. En movil caen solos.
+ */
+.filaForm {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 12rem);
+  align-items: start;
+  margin-top: 1.25rem;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.nota {
+  font-size: 0.75rem;
+  color: var(--tinta-tenue);
+}
+
+.notaError {
+  font-size: 0.75rem;
+  color: #ff9aa6;
+}
+
+.crear {
+  margin-top: 1.25rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* --------------------------------------------------------------------- archivadas */
+
+/*
+ * Una cartera archivada se ve apagada y sin bordes solidos: conserva sus datos pero no
+ * compite con las activas. El borde punteado, y no un color distinto, es lo que la marca como
+ * retirada sin tener que leer la etiqueta.
+ */
+.archivada .itemNombre {
+  color: var(--tinta-media);
+  font-weight: 500;
+}
+
+.archivada .entrar {
+  background-color: transparent;
+}
+
+/* ---------------------------------------------------------------------- adaptacion */
+
+@media (max-width: 639px) {
+  .carteras {
+    padding: 1.5rem 1rem 3rem;
+  }
+
+  .titulo {
+    font-size: 1.5rem;
+  }
+
+  .filaForm {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .crear {
+    justify-content: stretch;
+  }
+}

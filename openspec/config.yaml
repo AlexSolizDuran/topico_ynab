@@ -47,7 +47,7 @@ context: |
     `recurrencias` se materializa al reabrir la app. No se programa nada.
     Sin CSV, sin conciliacion bancaria, sin LLM, sin adjuntos, sin notificaciones.
     Sin conversion de moneda: cada cartera tiene una moneda y el panel nunca
-    mezcla dos.
+    mezcla dos; el resumen agrupa por moneda y tampoco mezcla.
 
   Convenciones
     Los specs en `openspec/specs/` siguen siendo neutrales de stack a proposito:
@@ -62,8 +62,8 @@ context: |
     parsea el flujo de sync de OpenSpec.
 
   FLUJO DE ESTE REPO
-    `openspec/specs/` es el diseño OBJETIVO ya acordado: 12 capacidades,
-    78 requisitos, 257 escenarios. Nada de eso está implementado todavía; el
+    `openspec/specs/` es el diseño OBJETIVO ya acordado: 13 capacidades,
+    87 requisitos, 273 escenarios. Nada de eso está implementado todavía; el
     repositorio no tiene codigo.
     Los changes en `openspec/changes/` IMPLEMENTAN contra esos requisitos, no
     los vuelven a derivar. Al proponer una capacidad, leerla primero con
@@ -73,7 +73,7 @@ context: |
     comportamiento nuevo, solo lo materializa.
 
   Estado
-    12 capacidades, 78 requisitos, 257 escenarios, todas validadas.
+    13 capacidades, 87 requisitos, 273 escenarios, todas validadas.
     6 decisiones de producto siguen abiertas en `PREGUNTAS.md`; ninguna bloquea
     la construccion, pero la de traspasos entre carteras de la misma moneda si
     cambia comportamiento y conviene resolverla antes de escribir codigo.

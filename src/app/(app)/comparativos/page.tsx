@@ -4,6 +4,8 @@ import { listarCarteras } from '@/repos/carteras'
 import { consultarComparativo } from '@/repos/comparativos'
 import { sesionActual } from '@/sesion/server'
 import { VistaComparativos } from '@/components/comparativos'
+import producto from '@/components/producto.module.css'
+import tema from '@/components/tema-oscuro.module.css'
 
 export const metadata = { title: 'Comparativos' }
 
@@ -46,11 +48,17 @@ export default async function PaginaComparativos({
 	)
 
 	return (
-		<main className="mx-auto max-w-6xl px-4 py-8">
-			<VistaComparativos
-				datos={datos}
-				carterasDisponibles={activas.map(({ id, nombre, moneda }) => ({ id, nombre, moneda }))}
-			/>
+		<main className={`${producto.pantalla} ${tema.oscuro}`}>
+			<div className={tema.rejilla} aria-hidden="true" />
+        <div className={tema.aurora} aria-hidden="true" />
+        <div className={tema.grano} aria-hidden="true" />
+
+			<div className={producto.contenido}>
+				<VistaComparativos
+					datos={datos}
+					carterasDisponibles={activas.map(({ id, nombre, moneda }) => ({ id, nombre, moneda }))}
+				/>
+			</div>
 		</main>
 	)
 }

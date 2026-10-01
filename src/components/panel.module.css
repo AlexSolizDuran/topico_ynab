@@ -1,0 +1,806 @@
+﻿/*
+ * Formato del panel.
+ *
+ * La paleta, el fondo del shell, la barra de navegacion y las primitivas de formulario NO
+ * estan aca: los aporta `tema-oscuro.module.css` y se activan con la clase `oscuro` que
+ * `panel.tsx` pone en el contenedor. Aca solo vive lo que es propio de esta pantalla.
+ *
+ * Mismo tema que la portada y las pantallas de sesion —fondo casi negro, lima, menta, coral—
+ * pero con otro objetivo: la portada busca llamar la atencion y el panel es una herramienta de
+ * consulta densa. Por eso aca el adorno se baja a un aurora al fondo y a un borde de lima en la
+ * cifra principal; todo lo demas es texto, separadores y numeros.
+ *
+ * La densidad sale de la estructura, no de achicar la tipografia. En vez de una tarjeta por
+ * dato, los importes que se comparan entre si —patrimonio, dinero suelto, ingresos, gastos—
+ * van en una sola grilla con divisores: se leen en horizontal sin recorrer cuatro bloques
+ * apilados, y el desglose que estaba escondido detras de un desplegable cabe en dos lineas.
+ */
+
+.panel {
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  min-height: 100dvh;
+  /* Mas aire arriba y abajo que antes (1.25rem / 3rem): el contenido vivia pegado al borde
+     superior y el pie quedaba a 3rem de una lista larga. Es solo padding del bloque raiz,
+     no cambia anchos ni la densidad interna de las filas. */
+  padding: 1.75rem 1rem 3.5rem;
+  background-color: var(--fondo);
+  color: var(--tinta-media);
+  font-size: 0.875rem;
+}
+
+/* --------------------------------------------------------------------- decoracion */
+
+/* El aurora, la rejilla y el grano los aporta `tema-oscuro.module.css`: son decoracion de
+   fondo, no formato del panel. Antes estaban repetidos aca con medidas distintas a las de las
+   otras pantallas. */
+
+/* ------------------------------------------------------------------------- retícula */
+
+.contenido {
+  position: relative;
+  margin: 0 auto;
+  width: 100%;
+  max-width: 68rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+/*
+ * Barra superior. Una sola fila con la cartera, su moneda y el selector: antes eran
+ * una tarjeta entera con el nombre en 1.05rem y los enlaces de cambio aparte, que ocupaba
+ * mas alto que la cifra que estaba debajo.
+ */
+/*
+ * La barra va con padding lateral: la etiqueta "Cartera activa", el nombre de la cartera y el
+ * selector de periodo se leen como una linea de encabezado, y a la orilla se leen como recorte.
+ * El filete de abajo cierra la barra y no toca los bordes: los margenes son del contenido, no
+ * del separador.
+ */
+.barraSuperior {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+  padding: 0 1.125rem 0.875rem;
+  border-bottom: 1px solid var(--borde);
+}
+
+.barraTitulo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+/*
+ * Antetitulo de la barra. `flex-basis: 100%` lo deja caer a su propia linea, incluso en
+ * escritorio: al lado del nombre se leeria como parte de la cartera.
+ */
+.barraEtiqueta {
+  flex-basis: 100%;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tinta-tenue);
+}
+
+.cartera {
+  font-family: var(--font-cifra);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--tinta);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.moneda {
+  flex-shrink: 0;
+  padding: 0.05rem 0.4rem;
+  border-radius: 0.3rem;
+  background-color: rgba(0, 240, 200, 0.12);
+  color: var(--menta);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.periodo {
+  font-family: var(--font-cifra);
+  font-size: 0.6875rem;
+  color: var(--tinta-tenue);
+  letter-spacing: 0.08em;
+}
+
+.barraAcciones {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.cambio {
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--borde);
+  border-radius: 0.4rem;
+  color: var(--tinta-media);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    border-color 0.18s ease,
+    color 0.18s ease,
+    background-color 0.18s ease;
+}
+
+.cambio:hover {
+  border-color: var(--borde-vivo);
+  background-color: var(--superficie-alta);
+  color: var(--tinta);
+}
+
+.cambioActual {
+  border-color: rgba(204, 255, 0, 0.35);
+  color: var(--lima);
+}
+
+/* --------------------------------------------------------- selector de cartera */
+
+/*
+ * El `<select>` hereda el repintado del tema por descendencia (`.oscuro :is(input, select)`),
+ * que le da el padding de un campo de formulario (0.625rem), pensado para un formulario y no
+ * para una barra de encabezado. La regla de abajo, con dos clases, le gana por especificidad
+ * (0,2,0 contra 0,1,1) y lo devuelve al tamano de las acciones de la barra.
+ */
+.selectorCartera {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.selectorEtiqueta {
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tinta-tenue);
+}
+
+.barraAcciones .selector {
+  max-width: 14rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.4rem;
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+/* ------------------------------------------------------------------------- tarjetas */
+
+.tarjeta {
+  border: 1px solid var(--borde);
+  border-radius: 0.85rem;
+  background-color: var(--superficie);
+}
+
+.seccion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--borde);
+}
+
+.titulo {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tinta-tenue);
+}
+
+.enlaceSuave {
+  color: var(--tinta-media);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.18s ease;
+}
+
+.enlaceSuave:hover {
+  color: var(--lima);
+}
+
+/*
+ * La grilla de cifras.
+ *
+ * Patrimonio y dinero suelto son las dos columnas grandes —son las que se comparan entre si
+ * y las que justifican el titulo— e ingresos, gastos y pendientes van abajo, en una fila mas
+ * chica. Antes eran cuatro bloques apilados con su propio borde, y el ojo tardaba tres
+ * segundos en recorrerlos.
+ */
+.cifras {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.celda {
+  padding: 0.875rem 1rem;
+  min-width: 0;
+}
+
+.celda + .celda {
+  border-left: 1px solid var(--borde);
+}
+
+.celdaEtiqueta {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tinta-tenue);
+}
+
+/*
+ * Halo difuminado en TODAS las cifras de la grilla, no solo en la del patrimonio.
+ *
+ * Antes el brillo vivia en `.celdaVela .celdaValor` y el resultado era que "Patrimonio neto"
+ * brillaba mientras "Dinero suelto", "Ingresos" y "Gastos" se leian como texto plano. El brillo
+ * dejaba de ser un tratamiento comun y pasaba a ser la marca del ancla, que es lo que este
+ * bloque ya resuelve con el tamano (1.9rem contra 1.5rem).
+ *
+ * Se usa `text-shadow` y no una capa desenfocada detras: `.celdaValor` no siempre lleva un
+ * numero. Con tres o mas movimientos sin asignar el valor es la frase "3 movimientos
+ * pendientes", que se parte en dos lineas, y un rectangulo difuminado detras se lee como un
+ * bloque de color partido. La sombra sigue cada glifo y no le importa como se ajuste el texto.
+ *
+ * El desenfoque va corto a proposito. El original usaba 28px, que sobre glifos finos engorda
+ * el trazo y deja la cifra chiclosa; a 10px el numero queda nitido y aun assim parece luz.
+ *
+ * `currentColor` mantiene el tono de cada variante (menta, cobre, riesgo) sin una regla por
+ * clase: el halo hereda el color del numero que ya lo define.
+ */
+.celdaValor {
+  display: block;
+  margin-top: 0.2rem;
+  font-family: var(--font-cifra);
+  font-variant-numeric: tabular-nums;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--tinta);
+  overflow-wrap: anywhere;
+  text-shadow: 0 0 10px currentColor;
+}
+
+/* El patrimonio es la cifra ancla: mas tamano y halo algo mas presente, no un halo distinto. */
+.celdaVela {
+  position: relative;
+}
+
+.celdaVela .celdaValor {
+  font-size: 1.9rem;
+  color: var(--lima);
+  text-shadow: 0 0 14px currentColor;
+}
+
+.celdaMenor {
+  border-top: 1px solid var(--borde);
+  padding: 0.625rem 1rem;
+}
+
+/*
+ * La fila chica usa su propia grilla, de tres columnas.
+ *
+ * Reusar `.cifras` (dos columnas) con tres celdas dejaba "sin sobre asignado" sola en una
+ * fila de la mitad del ancho, con el resto en blanco al lado. Tres columnas de ancho
+ * completo leen mejor: son tres datos del mismo nivel.
+ */
+.cifrasMenor {
+  grid-template-columns: 1fr;
+}
+
+.celdaMenor .celdaValor {
+  font-size: 1.05rem;
+}
+
+@media (min-width: 640px) {
+  .cifrasMenor {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .celdaMenor + .celdaMenor {
+    border-left: 1px solid var(--borde);
+  }
+}
+
+/* El desglose del patrimonio: la igualdad explicita, no un desplegable escondido. */
+.desglose {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 1rem 0.75rem;
+  border: 0;
+  border-top: 1px solid var(--borde);
+  background: transparent;
+  color: var(--tinta-tenue);
+  font-size: 0.75rem;
+  text-align: left;
+  cursor: pointer;
+  transition: color 0.18s ease;
+}
+
+.desglose:hover {
+  color: var(--tinta-media);
+}
+
+.desgloseAbierto {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  padding: 0 1rem 0.875rem;
+}
+
+.desgloseCelda {
+  padding: 0.5rem 0.625rem;
+  border-radius: 0.5rem;
+  background-color: var(--superficie-alta);
+  font-size: 0.75rem;
+}
+
+.desgloseCelda span:last-child {
+  display: block;
+  margin-top: 0.1rem;
+  font-family: var(--font-cifra);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--tinta);
+}
+
+/* --------------------------------------------------------------------------- listas */
+
+.filas {
+  display: flex;
+  flex-direction: column;
+}
+
+.fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.4375rem 1rem;
+  min-height: 2.25rem;
+}
+
+.fila + .fila {
+  border-top: 1px solid var(--borde);
+}
+
+.filaNombre {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  min-width: 0;
+  color: var(--tinta-media);
+  font-weight: 500;
+}
+
+.filaNombre > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tipo {
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  color: var(--tinta-tenue);
+}
+
+.filaValor {
+  flex-shrink: 0;
+  font-family: var(--font-cifra);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--tinta);
+}
+
+.filaTotal {
+  border-top: 1px solid var(--borde-vivo);
+  background-color: var(--tinte-1);
+  font-weight: 700;
+}
+
+/* Columnas: cuentas al lado de sobres, se comparan sin saltar de bloque. */
+.columnas {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.875rem;
+}
+
+/* ---------------------------------------------------------------------- sobres */
+
+/*
+ * Los grupos siguen plegables porque con muchas carteras la lista es larga, pero la fila
+ * del grupo es una sola linea delgada: el total del grupo al lado del nombre, sin caja
+ * propia.
+ */
+.grupo {
+  border-top: 1px solid var(--borde);
+}
+
+.grupo:first-child {
+  border-top: 0;
+}
+
+.grupoCabecera {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.4375rem 1rem;
+  background: transparent;
+  border: 0;
+  color: var(--tinta);
+  font-size: 0.8125rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.18s ease;
+}
+
+.grupoCabecera:hover {
+  background-color: var(--tinte-2);
+}
+
+.grupoIzquierda {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.grupoNombre {
+  font-weight: 600;
+  color: var(--tinta);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conteo {
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  color: var(--tinta-tenue);
+}
+
+.caret {
+  flex-shrink: 0;
+  font-size: 0.5625rem;
+  color: var(--tinta-tenue);
+  transition: transform 0.18s ease;
+}
+
+.caretAbierto {
+  transform: rotate(90deg);
+}
+
+/* El disponible de un sobre: numero a la derecha y una barra delgada debajo. */
+.sobre {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.375rem 1rem;
+}
+
+.sobre + .sobre {
+  border-top: 1px solid var(--trazo-suave);
+}
+
+.sobreCuerpo {
+  flex: 1;
+  min-width: 0;
+}
+
+.sobreLinea {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.pista {
+  height: 3px;
+  margin-top: 0.3rem;
+  border-radius: 9999px;
+  background-color: var(--tinte-4);
+  overflow: hidden;
+}
+
+.pistaRelleno {
+  height: 100%;
+  border-radius: 9999px;
+  background-image: linear-gradient(90deg, var(--lima), var(--menta));
+}
+
+/* --------------------------------------------------------------------------- metas */
+
+/*
+ * Subtitulo dentro de una tarjeta: separa un bloque de otro sin abrir otra caja. Se usa para
+ * las metas, que comparten tarjeta con los sobres pero no son un sobre ni un grupo.
+ */
+.subtitulo {
+  margin: 0.875rem 0 0.375rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--borde);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tinta-tenue);
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.4375rem 1rem;
+}
+
+.meta + .meta {
+  border-top: 1px solid var(--trazo-suave);
+}
+
+.metaCuerpo {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ------------------------------------------------------------------------- avisos */
+
+.aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  border: 1px solid rgba(255, 176, 32, 0.35);
+  border-radius: 0.6rem;
+  background-color: rgba(255, 176, 32, 0.08);
+  color: #ffd591;
+  font-size: 0.8125rem;
+}
+
+.desborde {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+}
+
+.desborde + .desborde {
+  border-top: 1px solid var(--borde);
+}
+
+.desbordeTexto {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.desbordeNombre {
+  font-weight: 600;
+  color: var(--tinta);
+}
+
+.desbordeValor {
+  font-family: var(--font-cifra);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--riesgo);
+}
+
+.desbordeNota {
+  font-size: 0.75rem;
+  color: var(--tinta-tenue);
+  font-style: italic;
+}
+
+/* -------------------------------------------------------------------------- botones */
+
+.boton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid transparent;
+  border-radius: 0.45rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.botonLima {
+  background-color: var(--lima);
+  color: var(--fondo);
+}
+
+.botonLima:hover {
+  background-color: var(--menta);
+}
+
+.botonAmbar {
+  border-color: rgba(255, 176, 32, 0.4);
+  background-color: rgba(255, 176, 32, 0.12);
+  color: var(--ambar);
+}
+
+.botonAmbar:hover {
+  background-color: rgba(255, 176, 32, 0.2);
+}
+
+.etiquetaRiesgo {
+  background-color: rgba(255, 84, 104, 0.14);
+  color: var(--riesgo);
+}
+
+.etiquetaMeta {
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.etiquetaRetrasada {
+  background-color: rgba(255, 176, 32, 0.14);
+  color: var(--ambar);
+}
+
+.etiquetaCumplida {
+  background-color: rgba(0, 240, 200, 0.14);
+  color: var(--menta);
+}
+
+.etiquetaCamino {
+  background-color: rgba(204, 255, 0, 0.14);
+  color: var(--lima);
+}
+
+/*
+ * Los modificadores de color van AL FINAL a proposito.
+ *
+ * `.riesgo` se aplica encima de `.filaValor` y `.celdaValor`, que ya ponen su propio
+ * `color`. Las dos son clases sueltas, asi que gana la que aparece despues en la hoja: con
+ * estos tres bloques arriba, un saldo en rojo se dibujaba en tinta blanca y el desborde
+ * dejaba de verse. Moverlos al final es lo que hace que el color de estado gane siempre.
+ */
+
+.ingreso {
+  color: var(--menta);
+}
+
+.gasto {
+  color: var(--cobre);
+}
+
+.riesgo {
+  color: var(--riesgo);
+}
+/* ------------------------------------------------------------------ foco y seleccion */
+
+.panel :is(a, button):focus-visible {
+  outline: 2px solid var(--lima);
+  outline-offset: 2px;
+  border-radius: 0.35rem;
+}
+
+.panel ::selection {
+  background-color: var(--lima);
+  color: var(--fondo);
+}
+
+/* -------------------------------------------------------------------- adaptacion */
+
+@media (min-width: 900px) {
+  .columnas {
+    grid-template-columns: 1fr 1.35fr;
+  }
+}
+
+@media (max-width: 767px) {
+  .panel {
+    padding: 1.25rem 0.75rem 2.75rem;
+  }
+
+  /* La cifra ancla no puede empujar la barra lateral en pantallas chicas. */
+  .celdaVela .celdaValor {
+    font-size: 1.5rem;
+  }
+
+  .celdaValor {
+    font-size: 1.125rem;
+  }
+
+  /* El padding lateral de la barra se apaga en movil: el padding del contenedor ya hace de
+     margen, y sumarlos deja la linea del nombre metida adentro. */
+  .barraSuperior {
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+  }
+
+  .barraAcciones {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .aurora::before,
+  .aurora::after {
+    filter: blur(60px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel *,
+  .panel *::before,
+  .panel *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+
+  .caret {
+    transition: none;
+  }
+}
+
+/* -------------------------------------------------------------------- tema claro */
+
+/*
+ * El halo (`text-shadow: currentColor`) es un brillo de neon pensado para el fondo negro.
+ * Sobre blanco se ve como una mancha gris alrededor de cada cifra: la ensucia y la hace
+ * parecer mas oscura y pesada de lo que es. En claro se apaga y el valor queda nitido.
+ *
+ * Ademas el valor sube un punto de luminosidad: la tinta de las cifras normales pasa a la
+ * tinta media. Los acentos se re-afirman DESPUES para conservar su color (si no, esta regla de
+ * `.celdaValor`, mas especifica que `.ingreso`, se los comeria). El patrimonio usa el lima
+ * claro, mas luminoso que el lima de marca pero todavia legible sobre blanco.
+ */
+html[data-tema='claro'] .celdaValor {
+  color: var(--tinta-media);
+  text-shadow: none;
+}
+
+html[data-tema='claro'] .ingreso {
+  color: var(--menta);
+}
+
+html[data-tema='claro'] .gasto {
+  color: var(--cobre);
+}
+
+html[data-tema='claro'] .riesgo {
+  color: var(--riesgo);
+}
+
+html[data-tema='claro'] .celdaVela .celdaValor {
+  color: var(--lima-suave);
+  text-shadow: none;
+}

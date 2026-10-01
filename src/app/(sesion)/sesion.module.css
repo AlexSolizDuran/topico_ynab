@@ -1,0 +1,237 @@
+/*
+ * Formato de las pantallas de sesion: entrar y crear cuenta.
+ *
+ * Comparte la paleta y los efectos con la portada —fondo casi negro, lima acido, auroras,
+ * vidrio— para que entrar a la app se sienta como el mismo lugar y no como otro sitio.
+ *
+ * Los tokens y el formato de los campos NO estan aca: los aporta `tema-oscuro.module.css` y
+ * se activan con la clase `oscuro` que `PantallaSesion` pone en su contenedor. Antes esta
+ * pantalla traia su propia copia de la paleta y sus propias reglas para inputs, botones y
+ * avisos; con la portada, el panel y carteras migrados, eran cuatro copias del mismo bloque.
+ * Lo que queda aca es lo propio de estas dos pantallas: auroras, grano, tarjeta y pie.
+ */
+
+.pantalla {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  min-height: 100vh;
+  min-height: 100dvh;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 2rem 1rem;
+  background-color: var(--fondo);
+  color: var(--tinta-media);
+}
+
+/* El boton de tema, en la esquina, fuera del flujo centrado de la tarjeta. */
+.temaEsquina {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  z-index: 2;
+}
+
+/*
+ * Las auroras van detras de todo y hacen el trabajo de fondo. `isolation: isolate` en
+ * `.pantalla` las mantiene encerradas aca: sin eso, el `blur` de estas tres manchas se
+ * filtraria al scroll de la pagina y aparecemos en un documento mas claro.
+ */
+.aurora {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+}
+
+.aurora::before,
+.aurora::after,
+.aurora span {
+  content: '';
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(80px);
+}
+
+.aurora::before {
+  top: -12rem;
+  left: -8rem;
+  width: 34rem;
+  height: 34rem;
+  background: radial-gradient(circle, rgba(204, 255, 0, 0.32), transparent 68%);
+  animation: respirar 16s ease-in-out infinite alternate;
+}
+
+.aurora::after {
+  bottom: -14rem;
+  right: -10rem;
+  width: 38rem;
+  height: 38rem;
+  background: radial-gradient(circle, rgba(0, 240, 200, 0.26), transparent 68%);
+  animation: respirar 20s ease-in-out infinite alternate-reverse;
+}
+
+.aurora span {
+  top: 32%;
+  left: 46%;
+  width: 26rem;
+  height: 26rem;
+  background: radial-gradient(circle, rgba(255, 61, 129, 0.18), transparent 70%);
+  animation: respirar 24s ease-in-out infinite alternate;
+}
+
+/* El grano lo aporta `tema-oscuro.module.css` (`.grano`), con la receta del panel. Aca usaba
+   140x140 con `opacity: 0.5`. */
+
+/* La grilla la aporta `tema-oscuro.module.css` (`.rejilla`). Aca estaba con `opacity: 0.4`
+   sobre lineas de `--borde` (0.08): bastante mas marcada que en la portada, que usaba 0.045.
+   Ahora las dos pantallas comparten la misma textura. */
+
+/*
+ * La columna que apila la tarjeta y el pie.
+ *
+ * `.pantalla` centra con flex y `justify-content: center`, que es lo que alinea el bloque
+ * entero en el centro vertical y horizontal. Sin este wrapper, el pie —que es hermano de
+ * la tarjeta— se convertia en otro item del flex y quedaba a la derecha de la caja.
+ */
+.columna {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 25rem;
+}
+
+/* ------------------------------------------------------------------------- tarjeta */
+
+.tarjeta {
+  position: relative;
+  width: 100%;
+  padding: 2rem;
+  border-radius: 1.5rem;
+  border: 1px solid var(--borde-vivo);
+  background-color: var(--superficie);
+  backdrop-filter: blur(24px);
+  box-shadow:
+    0 0 0 1px rgba(204, 255, 0, 0.06),
+    0 30px 80px -30px rgba(0, 0, 0, 0.9);
+}
+
+.encabezado {
+  margin-bottom: 1.75rem;
+  text-align: center;
+}
+
+.marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--font-cifra);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--tinta);
+  text-decoration: none;
+}
+
+.marcaIcono {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  place-items: center;
+  border-radius: 0.75rem;
+  background-color: var(--lima);
+  color: var(--fondo);
+}
+
+.titular {
+  margin-top: 1.25rem;
+  font-family: var(--font-cifra);
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--tinta);
+}
+
+.subtitulo {
+  margin-top: 0.4rem;
+  font-size: 0.875rem;
+  color: var(--tinta-media);
+}
+
+.pie {
+  margin-top: 1.5rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--tinta-tenue);
+}
+
+.pieEnlace {
+  font-weight: 600;
+  color: var(--lima);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.pieEnlace:hover {
+  color: var(--lima-suave);
+  text-decoration: underline;
+}
+
+/* ----------------------------------------------------------------------- animacion */
+
+@keyframes respirar {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  to {
+    transform: translate3d(2.5rem, 2rem, 0) scale(1.18);
+  }
+}
+
+/* -------------------------------------------------------------------- adaptacion */
+
+@media (max-width: 479px) {
+  .pantalla {
+    padding: 1.25rem 1rem;
+  }
+
+  .tarjeta {
+    padding: 1.5rem;
+    border-radius: 1.25rem;
+  }
+
+  .aurora::before,
+  .aurora::after,
+  .aurora span {
+    filter: blur(58px);
+  }
+}
+
+/* -------------------------------------------------------------------- tema claro */
+
+/*
+ * Las manchas y la sombra de la tarjeta estaban calibradas contra un fondo casi negro. Sobre
+ * blanco se apagan para que no quemen ni ensucien la lectura.
+ */
+
+html[data-tema='claro'] .aurora::before {
+  background: radial-gradient(circle, rgba(77, 124, 15, 0.16), transparent 68%);
+}
+
+html[data-tema='claro'] .aurora::after {
+  background: radial-gradient(circle, rgba(13, 148, 136, 0.14), transparent 68%);
+}
+
+html[data-tema='claro'] .aurora span {
+  background: radial-gradient(circle, rgba(190, 24, 93, 0.1), transparent 70%);
+}
+
+html[data-tema='claro'] .tarjeta {
+  box-shadow:
+    0 0 0 1px rgba(77, 124, 15, 0.08),
+    0 30px 80px -30px rgba(15, 23, 42, 0.25);
+}

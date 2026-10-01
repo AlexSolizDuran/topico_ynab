@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { formatear, type Dinero } from '../dinero'
 import type { HistorialPatrimonio, PuntoPatrimonio } from '../repos/patrimonio'
 import { MENSAJE_HISTORIA_MODIFICADA } from '../patrimonio/retroactividad'
+import detalle from './detalle.module.css'
 
 export interface PropsTarjetaPatrimonio {
   patrimonio: Dinero
@@ -28,41 +29,40 @@ export function TarjetaPatrimonio({
   const [detallesAbiertos, setDetallesAbiertos] = useState(false)
 
   return (
-    <div className="bg-white rounded-xl shadow-xs border border-gray-200 p-6 text-center">
-      <div className="text-sm font-medium text-gray-500 uppercase tracking-wider">
+    <div className={detalle.patrimonio}>
+      <div className={detalle.patrimonioRotulo}>
         Patrimonio {periodo ? `(${periodo})` : ''}
       </div>
-      <div className="mt-2 text-4xl font-extrabold text-gray-900 tracking-tight tabular-nums">
-        {formatear(patrimonio, moneda)}
-      </div>
+      <div className={detalle.patrimonioCifra}>{formatear(patrimonio, moneda)}</div>
 
-      <div className="mt-3">
+      {/*
+        La invariante va escrita y no solo insinuada: `patrimonio = en sobres + dinero suelto`.
+        Con los tres numeros a la vista, el usuario puede comprobar la suma sin abrir nada; el
+        boton solo hace explicito el desglose.
+      */}
+      <div className={detalle.patrimonioDesglose}>
         <button
           type="button"
           onClick={() => setDetallesAbiertos((v) => !v)}
-          className="text-xs text-blue-600 hover:text-blue-800 font-medium inline-flex items-center gap-1 cursor-pointer"
+          className={detalle.enlaceAccion}
           aria-expanded={detallesAbiertos}
         >
           <span>
             = {formatear(enSobres, moneda)} en sobres + {formatear(dineroSuelto, moneda)} sin asignar
           </span>
-          <span className="text-[10px]">{detallesAbiertos ? '▲' : '▼'}</span>
+          <span className={detalle.caret}>{detallesAbiertos ? '▲' : '▼'}</span>
         </button>
       </div>
 
       {detallesAbiertos && (
-        <div className="mt-4 pt-4 border-t border-gray-100 text-left grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-          <div className="p-3 bg-gray-50 rounded-lg">
-            <span className="text-gray-600 block text-xs">Disponible en sobres:</span>
-            <span className="font-semibold text-gray-900 tabular-nums">
-              {formatear(enSobres, moneda)}
-            </span>
+        <div className={detalle.patrimonioDetalles}>
+          <div className={detalle.patrimonioPieza}>
+            <span className={detalle.patrimonioPiezaRotulo}>Disponible en sobres:</span>
+            <span className={detalle.patrimonioPiezaCifra}>{formatear(enSobres, moneda)}</span>
           </div>
-          <div className="p-3 bg-gray-50 rounded-lg">
-            <span className="text-gray-600 block text-xs">Dinero suelto (sin asignar):</span>
-            <span className="font-semibold text-gray-900 tabular-nums">
-              {formatear(dineroSuelto, moneda)}
-            </span>
+          <div className={detalle.patrimonioPieza}>
+            <span className={detalle.patrimonioPiezaRotulo}>Dinero suelto (sin asignar):</span>
+            <span className={detalle.patrimonioPiezaCifra}>{formatear(dineroSuelto, moneda)}</span>
           </div>
         </div>
       )}
@@ -84,38 +84,45 @@ export function EvolucionPatrimonio({ historial, avisoRetroactivo }: PropsEvoluc
 
   if (periodos.length === 0) {
     return (
-      <div className="bg-white rounded-xl shadow-xs border border-gray-200 p-8 text-center text-gray-500">
+      <div className={detalle.vacioCentrado}>
         No hay registros históricos de patrimonio en esta cartera.
       </div>
     )
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-xs border border-gray-200 overflow-hidden">
+    <div className={detalle.patrimonio}>
       {avisoRetroactivo && <AvisoHistoriaModificada />}
 
-      <div className="p-5 border-b border-gray-100 flex flex-wrap justify-between items-center gap-2">
+      <div className={detalle.encabezadoTabla}>
         <div>
-          <h2 className="text-lg font-bold text-gray-900">Evolución del Patrimonio</h2>
-          <p className="text-xs text-gray-500">Cartera: {nombre_cartera} ({moneda})</p>
+          <h2 className={detalle.itemNombre}>Evolución del Patrimonio</h2>
+          <p className={detalle.itemDetalle}>
+            Cartera: {nombre_cartera} ({moneda})
+          </p>
         </div>
-        <span className="text-xs font-semibold px-2.5 py-1 bg-gray-100 text-gray-700 rounded-full">
+        <span className={detalle.pill}>
           {periodos.length} {periodos.length === 1 ? 'periodo' : 'periodos'}
         </span>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse text-sm">
+      {/*
+        `overflow-x-auto` con tabla de ancho minimo: cinco columnas de importes no entran en un
+        movil, y dejar que la tabla se desplace horizontalmente es preferible a ocultar la
+        columna de variacion, que es la que el usuario vino a ver.
+      */}
+      <div className={detalle.tablaContenedor}>
+        <table className={detalle.tabla}>
           <thead>
-            <tr className="bg-gray-50 text-gray-600 text-xs uppercase border-b border-gray-200">
-              <th className="py-3 px-4 font-semibold">Periodo</th>
-              <th className="py-3 px-4 font-semibold text-right">En Sobres</th>
-              <th className="py-3 px-4 font-semibold text-right">Dinero Suelto</th>
-              <th className="py-3 px-4 font-semibold text-right">Patrimonio</th>
-              <th className="py-3 px-4 font-semibold text-right">Variación</th>
+            <tr className={detalle.tablaCabecera}>
+              <th className={detalle.th}>Periodo</th>
+              <th className={`${detalle.th} ${detalle.thDerecha}`}>En Sobres</th>
+              <th className={`${detalle.th} ${detalle.thDerecha}`}>Dinero Suelto</th>
+              <th className={`${detalle.th} ${detalle.thDerecha}`}>Patrimonio</th>
+              <th className={`${detalle.th} ${detalle.thDerecha}`}>Variación</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody>
             {periodos.map((punto, index) => (
               <FilaPeriodo key={punto.periodo} punto={punto} moneda={moneda} esPrimero={index === 0} />
             ))}
@@ -140,37 +147,37 @@ function FilaPeriodo({
   const esNegativo = (punto.variacion_porcentual ?? 0) < 0
 
   return (
-    <tr className="hover:bg-gray-50/80 transition-colors">
-      <td className="py-3.5 px-4 font-medium text-gray-900">{punto.periodo}</td>
-      <td className="py-3.5 px-4 text-right text-gray-600 tabular-nums">
+    <tr className={detalle.tr}>
+      <td className={`${detalle.td} ${detalle.tdFuerte}`}>{punto.periodo}</td>
+      <td className={`${detalle.td} ${detalle.tdDerecha} ${detalle.tenue}`}>
         {formatear(punto.disponible_sobres, moneda)}
       </td>
-      <td className="py-3.5 px-4 text-right text-gray-600 tabular-nums">
+      <td className={`${detalle.td} ${detalle.tdDerecha} ${detalle.tenue}`}>
         {formatear(punto.dinero_suelto, moneda)}
       </td>
-      <td className="py-3.5 px-4 text-right font-bold text-gray-900 tabular-nums">
+      <td className={`${detalle.td} ${detalle.tdDerecha} ${detalle.tdFuerte}`}>
         {formatear(punto.patrimonio, moneda)}
       </td>
-      <td className="py-3.5 px-4 text-right tabular-nums">
+      <td className={`${detalle.td} ${detalle.tdDerecha}`}>
         {esPrimero ? (
-          <span className="text-xs text-gray-400 font-medium">Primer periodo</span>
+          <span className={detalle.notaCorta}>Primer periodo</span>
         ) : tieneVariacion ? (
+          /*
+            El signo del porcentaje ya dice la direccion: el color acompana. Un usuario que no
+            distingue el verde del rojo lee "+12.3%" igual que uno que si.
+          */
           <span
-            className={`inline-flex items-center gap-1 font-semibold text-xs px-2 py-0.5 rounded-full ${
-              esPositivo
-                ? 'bg-emerald-50 text-emerald-700'
-                : esNegativo
-                ? 'bg-rose-50 text-rose-700'
-                : 'bg-gray-100 text-gray-700'
+            className={`${detalle.pill} ${
+              esPositivo ? detalle.positivo : esNegativo ? detalle.negativo : ''
             }`}
           >
             <span>{punto.porcentaje_texto}</span>
-            <span className="text-[11px] text-gray-500 font-normal">
+            <span className={detalle.notaCortaClara}>
               ({punto.diferencia_absoluta && formatear(punto.diferencia_absoluta, moneda)})
             </span>
           </span>
         ) : (
-          <span className="text-xs text-gray-400">-</span>
+          <span className={detalle.notaCorta}>-</span>
         )}
       </td>
     </tr>
@@ -183,12 +190,9 @@ export function AvisoHistoriaModificada({
   mensaje?: string
 }) {
   return (
-    <div
-      role="alert"
-      className="bg-amber-50 border-b border-amber-200 p-4 text-amber-900 flex items-center justify-between text-sm"
-    >
-      <div className="flex items-center gap-2">
-        <span className="text-amber-600 font-bold" aria-hidden="true">
+    <div role="alert" className={detalle.avisoHistoria}>
+      <div className={detalle.acciones}>
+        <span className={detalle.avisoHistoriaIcono} aria-hidden="true">
           ℹ
         </span>
         <span>{mensaje}</span>

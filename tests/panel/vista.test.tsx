@@ -124,7 +124,13 @@ describe('110: componentes de interfaz del panel', () => {
     expect(res).toContain('Banco BBVA')
     expect(res).toContain('Tarjeta Crédito')
     expect(res).toContain('600.00')
-    expect(res).toContain('text-rose-600') // Cuenta de crédito en rojo
+    /*
+     * El rojo es `estilos.riesgo` y no una utilidad de Tailwind. La clase del modulo se
+     * cumple en cualquier tema —claro u oscuro— mientras que `text-rose-600` fija un tono del
+     * tema claro y ademas es el unico valor del color que no tendria que quedar escrito en un
+     * componente. El hash se matchea sin fijarlo: Vitest lo agrega al nombre de clase.
+     */
+    expect(res).toMatch(/_riesgo_/) // Cuenta de crédito en rojo
     expect(res).toContain('Total cuentas activas')
     expect(res).toContain('Cuentas archivadas (1)')
   })

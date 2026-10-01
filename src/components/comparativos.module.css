@@ -1,0 +1,416 @@
+/*
+ * Formato del comparativo de periodos.
+ *
+ * La paleta y las primitivas vienen de `tema-oscuro.module.css` (clase `oscuro`); aca esta la
+ * forma de esta pantalla en particular.
+ *
+ * Esta vista tiene tres bloques con problemas distintos, y cada uno pide una solucion distinta:
+ *
+ *  - La barra de controles son tres campos de un mismo tipo. Van en grilla de tres columnas y
+ *    no en una tarjeta por campo: son una sola unidad—"cambiar el criterio de la comparación"— y
+ *    separarlos invita a creer que se pueden usar por separado.
+ *
+ *  - Las variaciones destacadas son el resultado de la pantalla: lo que el usuario vino a ver.
+ *    Por eso van en grilla de tarjetas y no en la tabla, que viene abajo para el detalle. El
+ *    color de cada tarjeta dice la direccion (aumento o disminucion) y el chip la repite en
+ *    texto, porque el color solo no llega a quien no distingue rojo y verde.
+ *
+ *  - La matriz es una tabla de numeros y por eso va con `tabular-nums` en todas las celdas de
+ *    importe: es la unica forma de que las columnas se alineen y se puedan comparar de un
+ *    vistazo a lo largo de la fila.
+ */
+
+/* --------------------------------------------------------------------- contenedor */
+
+.vista {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* --------------------------------------------------------------------- encabezado */
+
+.encabezado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--borde);
+}
+
+.titulo {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--tinta);
+}
+
+.bajada {
+  margin: 0.25rem 0 0;
+  font-size: 0.875rem;
+  color: var(--tinta-tenue);
+}
+
+.carteraNombre {
+  font-weight: 600;
+  color: var(--tinta-media);
+}
+
+.selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.etiqueta {
+  color: var(--tinta-tenue);
+}
+
+/* --------------------------------------------------------------------- controles */
+
+.controles {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 1rem;
+  border: 1px solid var(--borde);
+  border-radius: 0.75rem;
+  background-color: var(--superficie);
+}
+
+.control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.controlEtiqueta {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--tinta-media);
+}
+
+/* ------------------------------------------------------------------- highlighted */
+
+.tarjeta {
+  padding: 1.25rem;
+  border: 1px solid var(--borde);
+  border-radius: 0.875rem;
+  background-color: var(--superficie);
+}
+
+.tarjetaCabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.seccionTitulo {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--tinta);
+}
+
+.seccionNota {
+  font-size: 0.75rem;
+  color: var(--tinta-tenue);
+}
+
+.destacadas {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+}
+
+/*
+ * Fondo tenue y borde del color de la direccion. No se usa un rojo o verde saturado de fondo
+ * porque sobre negro el texto de dentro dejaria de contrastar; la direccion la carga el borde y
+ * el chip de texto.
+ */
+.destacada {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.875rem;
+  border: 1px solid;
+  border-radius: 0.75rem;
+}
+
+.destacadaAumento {
+  border-color: rgba(255, 84, 104, 0.42);
+  background-color: rgba(255, 84, 104, 0.08);
+}
+
+.destacadaDisminucion {
+  border-color: rgba(0, 240, 200, 0.38);
+  background-color: rgba(0, 240, 200, 0.07);
+}
+
+.destacadaTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.destacadaTipo {
+  display: block;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tinta-tenue);
+}
+
+.destacadaNombre {
+  margin: 0.125rem 0 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--tinta);
+}
+
+.chip {
+  flex-shrink: 0;
+  padding: 0.1rem 0.45rem;
+  border-radius: 9999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.chipAumento {
+  background-color: rgba(255, 84, 104, 0.16);
+  color: #ff9aa6;
+}
+
+.chipDisminucion {
+  background-color: rgba(0, 240, 200, 0.15);
+  color: #7df5e0;
+}
+
+.destacadaPie {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--borde);
+  font-size: 0.8125rem;
+}
+
+.destacadaPeriodo {
+  color: var(--tinta-tenue);
+}
+
+.destacadaValor {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--tinta);
+}
+
+.destacadaPorcentaje {
+  margin-left: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--tinta-tenue);
+}
+
+/* ------------------------------------------------------------------------ vacio */
+
+.vacio {
+  padding: 1.75rem;
+  border: 1px dashed var(--borde-vivo);
+  border-radius: 0.75rem;
+  text-align: center;
+}
+
+.vacioTitulo {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--tinta-media);
+}
+
+.vacioTexto {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--tinta-tenue);
+}
+
+/* ------------------------------------------------------------------------ tabla */
+
+.tablaCaja {
+  border: 1px solid var(--borde);
+  border-radius: 0.875rem;
+  background-color: var(--superficie);
+  overflow: hidden;
+}
+
+.tablaCabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--borde);
+}
+
+/*
+ * El scroll horizontal va en un envoltorio y no en la tabla. Con `overflow-x` en la propia
+ * tabla, el encabezado se va con el scroll y las columnas dejan de coincidir con sus importes.
+ */
+.tablaScroll {
+  overflow-x: auto;
+}
+
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.tabla th,
+.tabla td {
+  padding: 0.625rem 0.75rem;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.tabla thead th {
+  background-color: var(--tinte-2);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tinta-tenue);
+}
+
+.tabla thead tr + tr th {
+  background-color: transparent;
+  font-size: 0.625rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--tinta-tenue);
+}
+
+.ref {
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--lima);
+}
+
+.derecha {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.fila {
+  border-top: 1px solid var(--borde);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.fila:hover {
+  background-color: var(--tinte-2);
+}
+
+/*
+ * La fila de grupo se separa del resto con fondo propio: es una fila de total, no una fila de
+ * datos, y sin esto se pierde en el ruido cuando la tabla tiene veinte sobres.
+ */
+.filaGrupo {
+  background-color: var(--tinte-3);
+  font-weight: 600;
+  color: var(--tinta);
+}
+
+.celdaNombre {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--tinta-media);
+}
+
+.celdaGrupo {
+  color: var(--tinta);
+  font-weight: 600;
+}
+
+.caret {
+  font-size: 0.625rem;
+  color: var(--tinta-tenue);
+}
+
+.celdaSobre {
+  padding-left: 2rem;
+}
+
+/* Los importes van en la tipografia de cifras del sistema: alinea las columnas. */
+.importe {
+  font-variant-numeric: tabular-nums;
+  color: var(--tinta-media);
+}
+
+.total {
+  border-top: 1px solid var(--borde-vivo);
+  background-color: var(--tinte-3);
+  font-weight: 700;
+  color: var(--tinta);
+}
+
+/* ------------------------------------------------------------------- insignias */
+
+.badgeVariacion {
+  padding: 0.05rem 0.35rem;
+  border-radius: 0.3rem;
+  background-color: rgba(255, 176, 32, 0.14);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ambar);
+}
+
+.badgeArchivado {
+  padding: 0.05rem 0.3rem;
+  border: 1px solid var(--borde);
+  border-radius: 0.3rem;
+  font-size: 0.625rem;
+  color: var(--tinta-tenue);
+}
+
+/* ------------------------------------------------------------------- semanticos */
+
+.aumento {
+  font-weight: 700;
+  color: var(--riesgo);
+}
+
+.disminucion {
+  font-weight: 700;
+  color: var(--menta);
+}
+
+.neutro {
+  color: var(--tinta-tenue);
+}
+
+/* ---------------------------------------------------------------------- adaptacion */
+
+@media (max-width: 767px) {
+  .controles {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

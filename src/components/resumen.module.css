@@ -1,0 +1,263 @@
+/*
+ * Estilos propios de la vista de Resumen global.
+ *
+ * El contenedor, el encabezado y las tarjetas salen de `producto.module.css`; la paleta y
+ * las primitivas de formulario, de `tema-oscuro.module.css` por la clase `oscuro`. Aca solo
+ * vive lo que es especifico de esta pantalla: el filtro de mes, las pestanas de moneda, la
+ * grilla de cifras, las tablas y las barras del gasto diario.
+ */
+
+.vista {
+  display: flex;
+  flex-direction: column;
+}
+
+/* --------------------------------------------------------------- filtro de mes */
+
+.periodoForm {
+  margin-top: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.periodoEtiqueta {
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tinta-tenue);
+}
+
+/*
+ * El `input[type=month]` hereda del tema el relleno alto de un campo de formulario. En una
+ * barra de filtro se quiere mas bajo, y con dos clases se gana a `.oscuro :is(input, select)`.
+ */
+.periodoForm input {
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.periodoForm button[type='submit'] {
+  padding: 0.4rem 0.9rem;
+  font-size: 0.8125rem;
+}
+
+/* --------------------------------------------------------------- pestanas de moneda */
+
+.monedas {
+  margin-bottom: 1.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.monedaPestana {
+  padding: 0.35rem 0.9rem;
+  border: 1px solid var(--borde);
+  border-radius: 999px;
+  background-color: transparent;
+  color: var(--tinta-media);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    color 0.18s ease,
+    background-color 0.18s ease;
+}
+
+.monedaPestana:hover {
+  border-color: var(--borde-vivo);
+  color: var(--tinta);
+}
+
+.monedaActiva {
+  border-color: rgba(204, 255, 0, 0.45);
+  background-color: rgba(204, 255, 0, 0.1);
+  color: var(--lima);
+}
+
+/* ------------------------------------------------------------------------- cifras */
+
+.cifras {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.cifrasMenor {
+  margin-top: 0.75rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--borde);
+}
+
+.cifra {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.cifraEtiqueta {
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tinta-tenue);
+}
+
+.cifraValor {
+  font-family: var(--font-cifra);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--tinta);
+  overflow-wrap: anywhere;
+}
+
+.cifraVela {
+  color: var(--lima);
+}
+
+.ingreso {
+  color: var(--menta);
+}
+
+.gasto {
+  color: var(--cobre);
+}
+
+.riesgo {
+  color: var(--riesgo);
+}
+
+/* ------------------------------------------------------------------------- tablas */
+
+.tablaScroll {
+  overflow-x: auto;
+}
+
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.tabla thead th {
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid var(--borde);
+  color: var(--tinta-tenue);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.tabla tbody td {
+  padding: 0.45rem 0.6rem;
+  border-bottom: 1px solid var(--borde);
+  color: var(--tinta-media);
+}
+
+.tabla tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.num {
+  text-align: right;
+  font-family: var(--font-cifra);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.etiqueta {
+  margin-left: 0.5rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 0.3rem;
+  background-color: var(--superficie-alta);
+  color: var(--tinta-tenue);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.vacio {
+  margin: 0;
+  color: var(--tinta-tenue);
+  font-size: 0.8125rem;
+}
+
+/* ------------------------------------------------------------------- gasto diario */
+
+.barras {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.2rem;
+  height: 8.5rem;
+  padding-top: 0.5rem;
+}
+
+.columna {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  min-width: 0;
+}
+
+/*
+ * La barra crece desde la base (la columna la empuja con `justify-content: flex-end`). El
+ * degradado la mantiene legible en los dos temas: usa el cobre, que ya cambia de tono.
+ */
+.barra {
+  width: 100%;
+  max-width: 1.1rem;
+  border-radius: 0.2rem 0.2rem 0 0;
+  background: linear-gradient(to top, var(--cobre), var(--ambar));
+  transition: filter 0.15s ease;
+}
+
+.columna:hover .barra {
+  filter: brightness(1.25);
+}
+
+.barraDia {
+  margin-top: 0.25rem;
+  font-size: 0.5625rem;
+  color: var(--tinta-tenue);
+  font-variant-numeric: tabular-nums;
+}
+
+.barraPie {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--tinta-tenue);
+}
+
+/* ------------------------------------------------------------------- adaptacion */
+
+@media (max-width: 639px) {
+  .cifras,
+  .cifrasMenor {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+  }
+
+  .barras {
+    height: 6.5rem;
+  }
+
+  .barraDia {
+    font-size: 0.5rem;
+  }
+}

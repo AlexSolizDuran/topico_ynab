@@ -41,6 +41,7 @@ import {
   type OpcionVista,
   Selector,
 } from './sesion'
+import detalle from './detalle.module.css'
 
 /** Una cuenta o un sobre, tal como los elige el usuario. */
 export type { OpcionVista }
@@ -120,7 +121,7 @@ function Resultado({ estado, periodo }: { estado: ResultadoDeMovimiento; periodo
     return <Aviso tono="error">{estado.error}</Aviso>
   }
   return (
-    <div className="flex flex-col gap-2">
+    <div className={detalle.bloque}>
       {estado.aviso ? <Aviso tono="exito">{estado.aviso}</Aviso> : null}
       <AvisoRetroactivo periodoAfectado={estado.periodo_afectado} periodoActual={periodo} />
     </div>
@@ -146,7 +147,7 @@ function Campos({
     <>
       <Resultado estado={estado} periodo={periodo} />
       {estado.campos && !estado.error ? (
-        <p className="text-xs text-slate-500">
+        <p className={detalle.nota}>
           Revisá los campos marcados e intentá de nuevo.
         </p>
       ) : null}
@@ -187,9 +188,9 @@ export function FormularioNuevoMovimiento({
   )
 
   return (
-    <form action={enviar} className="flex flex-col gap-4">
+    <form action={enviar} className={detalle.formulario}>
       <Campos estado={estado} periodo={periodo} />
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className={detalle.grillaDos}>
         <Selector
           opciones={cuentas}
           nombre="cuenta_id"
@@ -225,7 +226,7 @@ export function FormularioNuevoMovimiento({
           requerido={false}
         />
       </div>
-      <div className="flex justify-end">
+      <div className={detalle.alDerecha}>
         <AccionPendiente>Registrar movimiento</AccionPendiente>
       </div>
     </form>
@@ -258,9 +259,9 @@ export function FilaEditarMovimiento({
   )
 
   return (
-    <form action={enviar} className="mt-3 flex flex-col gap-3 rounded-xl bg-slate-50 p-4">
+    <form action={enviar} className={`${detalle.formulario} ${detalle.formularioAnidado}`}>
       <Campos estado={estado} periodo={periodo} />
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className={detalle.grillaDos}>
         <Selector
           opciones={cuentas}
           nombre="cuenta_id"
@@ -304,11 +305,11 @@ export function FilaEditarMovimiento({
           defaultValue={movimiento.comercio ?? ''}
         />
       </div>
-      <p className="text-xs text-slate-500">
+      <p className={detalle.nota}>
         El tipo no se edita: sale del signo del importe, y un traspaso se cambia borrando y
         registrando de nuevo.
       </p>
-      <div className="flex justify-end gap-2">
+      <div className={detalle.alDerecha}>
         <AccionPendiente>Guardar correccion</AccionPendiente>
       </div>
     </form>
@@ -358,16 +359,16 @@ export function FilaMovimiento({
   const monto = formatear(movimiento.monto, moneda)
 
   return (
-    <li className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
+<li className={detalle.item}>
+      <div className={detalle.itemEncabezado}>
         <div>
-          <p className="font-medium text-slate-900">
+          <p className={detalle.itemNombre}>
             {movimiento.descripcion || ETIQUETA_TIPO[movimiento.tipo]}
             {movimiento.comercio ? (
-              <span className="font-normal text-slate-500"> · {movimiento.comercio}</span>
+              <span className={detalle.itemDetalle}> · {movimiento.comercio}</span>
             ) : null}
           </p>
-          <p className="text-xs text-slate-500">
+          <p className={detalle.itemDetalle}>
             {movimiento.fecha} ·{' '}
             {/*
               Un traspaso se lee de donde a donde. Para el resto el recorrido devuelve `null` y
@@ -379,49 +380,39 @@ export function FilaMovimiento({
           </p>
         </div>
         <p
-          className={`font-mono text-lg font-semibold tabular-nums ${
-            movimiento.tipo === 'gasto' ? 'text-red-700' : 'text-emerald-700'
+          className={`${detalle.itemValor} ${
+            movimiento.tipo === 'gasto' ? detalle.negativo : detalle.positivo
           }`}
         >
           {monto}
         </p>
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-600">
-          {ETIQUETA_TIPO[movimiento.tipo]}
-        </span>
+      <div className={detalle.pills}>
+        <span className={detalle.pill}>{ETIQUETA_TIPO[movimiento.tipo]}</span>
         {/*
           R2: un movimiento sin sobre esta **pendiente**, no incompleto. Se marca y se ofrece
           el alta de destino en el mismo lugar: el pending no es un dato, es una accion
           pendiente de hacer.
         */}
-        {movimiento.pendiente ? (
-          <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-900">
-            sin asignar
-          </span>
-        ) : null}
+        {movimiento.pendiente ? <span className={`${detalle.pill} ${detalle.pillAtencion}`}>sin asignar</span> : null}
         {/*
           Una pata de traspaso no se edita ni se borra sola: R6 dice que se van las dos. El
           boton dice las dos cosas para que el click no sea una sorpresa.
         */}
-        {movimiento.pata ? (
-          <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-indigo-800">
-            pata de un traspaso
-          </span>
-        ) : null}
+        {movimiento.pata ? <span className={`${detalle.pill} ${detalle.pillTraspaso}`}>pata de un traspaso</span> : null}
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-2">
+      <div className={detalle.acciones}>
         {/*
           Las dos ramas van al mismo `<details>` con el mismo `<summary>` y cambian **solo** el
           formulario de adentro. Antes de `070` D5 no habia rama de pata: una pata no se
-          corregia, porque `editarMovimiento` la rechazaba. Ahora se corrige en espejo, asi que
+          corrigia, porque `editarMovimiento` la rechazaba. Ahora se corrige en espejo, asi que
           el formulario es el de traspasos, y por eso el aviso de que se mueven las dos patas va
           ahi y no en un `onClick` de este boton.
         */}
-        <details open={abierta} className="flex-1">
-          <summary className="cursor-pointer text-sm text-slate-500 hover:text-slate-900">
+        <details open={abierta} className={detalle.crece}>
+          <summary className={detalle.resumen}>
             {movimiento.pata ? 'Corregir el traspaso' : 'Corregir'}
           </summary>
           {movimiento.pata ? (
@@ -443,23 +434,23 @@ export function FilaMovimiento({
         </details>
 
         {estadoBorrar.error || estadoAsignar.error ? (
-          <p role="alert" className="text-xs text-red-700">
+          <p role="alert" className={detalle.errorLinea}>
             {estadoBorrar.error ?? estadoAsignar.error}
           </p>
         ) : null}
         {estadoBorrar.aviso ? (
-          <p role="status" className="text-xs text-emerald-700">
+          <p role="status" className={detalle.exitoLinea}>
             {estadoBorrar.aviso}
           </p>
         ) : null}
         {estadoAsignar.aviso ? (
-          <p role="status" className="text-xs text-emerald-700">
+          <p role="status" className={detalle.exitoLinea}>
             {estadoAsignar.aviso}
           </p>
         ) : null}
       </div>
 
-      <div className="mt-3 flex flex-wrap items-end gap-2">
+      <div className={detalle.formularioEnLinea}>
         {/*
           Asignar sobre se ofrece cuando no tiene sobre y **no** es una pata.
           `sobre_id === null` solo, sin el `!pata`, alcanzaria tambien a las patas de un
@@ -468,7 +459,7 @@ export function FilaMovimiento({
           por eso: el repository rechaza asignar a una pata, no hay excepcion.
         */}
         {!movimiento.pata && (movimiento.pendiente || movimiento.sobre_id === null) ? (
-          <form action={asignar} className="flex flex-wrap items-end gap-2">
+          <form action={asignar} className={detalle.formularioEnLinea}>
             <Selector
               opciones={sobres}
               nombre="sobre_id"
@@ -537,38 +528,38 @@ export function FilaMovimientoEliminada({
   )
 
   return (
-    <li className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4">
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
+    <li className={`${detalle.item} ${detalle.itemArchivado}`}>
+      <div className={detalle.itemEncabezado}>
         <div>
-          <p className="font-medium text-slate-500 line-through">
+          <p className={`${detalle.itemNombre} ${detalle.tachado}`}>
             {movimiento.descripcion || ETIQUETA_TIPO[movimiento.tipo]}
             {movimiento.comercio ? (
-              <span className="font-normal text-slate-400"> · {movimiento.comercio}</span>
+              <span className={detalle.itemDetalle}> · {movimiento.comercio}</span>
             ) : null}
           </p>
-          <p className="text-xs text-slate-400">
+          <p className={`${detalle.itemDetalle} ${detalle.apagado}`}>
             {movimiento.fecha} · {movimiento.cuenta_nombre}
             {eliminada_en ? ` · eliminado el ${eliminada_en.slice(0, 10)}` : ''}
           </p>
         </div>
-        <p className="font-mono text-sm text-slate-400 tabular-nums">
+        <p className={`${detalle.itemValor} ${detalle.valorMedio} ${detalle.apagado}`}>
           {formatear(movimiento.monto, moneda)}
         </p>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-2">
+      <div className={detalle.acciones}>
         <form action={restaurar}>
           <AccionPendiente>
             {movimiento.pata ? 'Restaurar las dos patas' : 'Restaurar'}
           </AccionPendiente>
         </form>
         {estado.error ? (
-          <p role="alert" className="text-xs text-red-700">
+          <p role="alert" className={detalle.errorLinea}>
             {estado.error}
           </p>
         ) : null}
         {estado.aviso ? (
-          <p role="status" className="text-xs text-emerald-700">
+          <p role="status" className={detalle.exitoLinea}>
             {estado.aviso}
           </p>
         ) : null}
@@ -599,13 +590,13 @@ export function ListaMovimientosEliminados({
   if (movimientos.length === 0) return null
 
   return (
-    <section className="flex flex-col gap-3">
-      <h3 className="text-sm font-semibold text-slate-600">Eliminados</h3>
-      <p className="text-xs text-slate-500">
+    <section className={detalle.bloque}>
+      <h3 className={detalle.seccionTituloPequeño}>Eliminados</h3>
+      <p className={detalle.nota}>
         No cuentan en ningun calculo, pero se conservan: R6 es un borrado logico y por eso se
         pueden restaurar.
       </p>
-      <ul className="flex flex-col gap-3">
+      <ul className={detalle.lista}>
         {movimientos.map((movimiento) => (
           <FilaMovimientoEliminada
             key={movimiento.id}
@@ -665,8 +656,8 @@ export function ListaMovimientos({
   filtroInvalido?: boolean
 }) {
   return (
-    <div className="flex flex-col gap-4">
-      <form method="get" className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-3">
+    <div className={detalle.bloque}>
+      <form method="get" className={detalle.filtros}>
         <Campo
           nombre="texto"
           etiqueta="Buscar"
@@ -688,12 +679,12 @@ export function ListaMovimientos({
           vacio="Todos"
           seleccionado={filtro.sobre_id}
         />
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-700">Tipo</span>
+        <label className={detalle.campo}>
+          <span className={detalle.etiqueta}>Tipo</span>
           <select
             name="tipo"
             defaultValue={filtro.tipo}
-            className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
+            className={detalle.selector}
           >
             {TIPOS.map((tipo) => (
               <option key={tipo.valor} value={tipo.valor}>
@@ -704,7 +695,7 @@ export function ListaMovimientos({
         </label>
         <Campo nombre="desde" etiqueta="Desde" tipo="date" requerido={false} defaultValue={filtro.desde} />
         <Campo nombre="hasta" etiqueta="Hasta" tipo="date" requerido={false} defaultValue={filtro.hasta} />
-        <div className="flex items-end gap-2">
+        <div className={detalle.formularioCercano}>
           <Boton>Filtrar</Boton>
           {/*
             Limpiar es un enlace a la cartera sin query, no un boton: limpiar un filtro no es
@@ -713,7 +704,7 @@ export function ListaMovimientos({
           {hayFiltro ? (
             <a
               href={`/cartera/${cartera_id}`}
-              className="rounded-xl px-3 py-2 text-sm text-slate-500 hover:underline"
+              className={detalle.enlaceSuave}
             >
               Limpiar
             </a>
@@ -722,13 +713,13 @@ export function ListaMovimientos({
       </form>
 
       {filtroInvalido || movimientos.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-slate-300 p-6 text-sm text-slate-500">
+        <p className={detalle.vacio}>
           {hayFiltro
             ? 'Ningún movimiento coincide con el filtro. Podés limpiarlo para ver todos.'
             : 'Todavía no hay movimientos en esta cartera.'}
         </p>
       ) : (
-        <ul className="flex flex-col gap-3">
+        <ul className={detalle.lista}>
           {movimientos.map((movimiento) => (
             <FilaMovimiento
               key={movimiento.id}

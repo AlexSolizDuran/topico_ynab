@@ -36,6 +36,9 @@ import {
   type MovimientoEnVista,
 } from '@/components/transacciones'
 import { FormularioNuevoTraspaso } from '@/components/traspasos'
+import producto from '@/components/producto.module.css'
+import detalle from '@/components/detalle.module.css'
+import tema from '@/components/tema-oscuro.module.css'
 
 /**
  * El mes que se mira.
@@ -363,49 +366,58 @@ export default async function PaginaCuentas({
         filtroUrl.datos.hasta,
     )
 
-  return (
-    <main className="mx-auto max-w-4xl px-4 py-10">
-      <p className="text-xs text-slate-500">
-        <a href="/carteras" className="hover:underline">
-          Carteras
-        </a>
-      </p>
-      <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">{cartera.nombre}</h1>
-      <p className="mt-1 text-sm text-slate-500">
-        Cuentas en {cartera.moneda}. El saldo de cada una se deriva de su saldo inicial y sus
-        movimientos.
-      </p>
+return (
+    <main className={`${producto.pantalla} ${tema.oscuro}`}>
+      <div className={tema.rejilla} aria-hidden="true" />
+        <div className={tema.aurora} aria-hidden="true" />
+        <div className={tema.grano} aria-hidden="true" />
+
+      <div className={`${producto.contenido} ${producto.contenidoCercano}`}>
+        <header className={producto.encabezado}>
+          <p className={detalle.migas}>
+            <a href="/carteras" className={detalle.migasEnlace}>
+              Carteras
+            </a>
+          </p>
+          <h1 className={producto.titulo}>{cartera.nombre}</h1>
+          <p className={producto.bajada}>
+            Cuentas en {cartera.moneda}. El saldo de cada una se deriva de su saldo inicial y sus
+            movimientos.
+          </p>
+        </header>
 
       {/**
         El resumen de la cartera en el mes.
 
         R9 pide que la suma de los disponibles mas el dinero suelto iguale el patrimonio, y
         que si no cuadra sea un error. Mostrar las tres cifras juntas es la forma de que el
-        usuario vea la invariante sin tener que summarla: si un dia no cierra, se nota en
-        la pantalla y no en un ticket.
+        usuario vea la invariante sin tener que summarla: si un dia no cierra, se nota en la
+        pantalla y no en un ticket.
       */}
-      <section className="mt-6 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-xs tracking-wide text-slate-500 uppercase">Patrimonio</p>
-          <p className="mt-1 font-mono text-xl font-semibold text-slate-900 tabular-nums">
+      <section className={detalle.metricas}>
+        <div className={detalle.metrica}>
+          <p className={detalle.metricaEtiqueta}>Patrimonio</p>
+          <p className={detalle.metricaValor}>
             {formatear(resumen.patrimonio, cartera.moneda)}
           </p>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-xs tracking-wide text-slate-500 uppercase">Repartido en sobres</p>
-          <p className="mt-1 font-mono text-xl font-semibold text-slate-900 tabular-nums">
+        <div className={detalle.metrica}>
+          <p className={detalle.metricaEtiqueta}>Repartido en sobres</p>
+          <p className={detalle.metricaValor}>
             {formatear(resumen.asignado, cartera.moneda)}
           </p>
         </div>
+        {/*
+          El dinero suelto en cero se destaca: no es un dato neutro, es la señal de que la
+          cartera está totalmente asignada. En cualquier otro valor va como una métrica más.
+        */}
         <div
-          className={`rounded-2xl border p-4 shadow-sm ${
-            resumen.hay_dinero_suelto
-              ? 'border-slate-200 bg-white'
-              : 'border-amber-300 bg-amber-50'
+          className={`${detalle.metrica} ${
+            resumen.hay_dinero_suelto ? '' : detalle.metricaAtencion
           }`}
         >
-          <p className="text-xs tracking-wide text-slate-500 uppercase">Dinero suelto</p>
-          <p className="mt-1 font-mono text-xl font-semibold text-slate-900 tabular-nums">
+          <p className={detalle.metricaEtiqueta}>Dinero suelto</p>
+          <p className={detalle.metricaValor}>
             {formatear(resumen.dinero_suelto, cartera.moneda)}
           </p>
         </div>
@@ -420,36 +432,35 @@ export default async function PaginaCuentas({
         condiciones tiene que verse una sola vez y en rojo.
       */}
       {enNegativo.length > 0 ? (
-        <section className="mt-6 rounded-2xl border border-red-300 bg-red-50 p-5">
-          <h2 className="text-sm font-semibold tracking-wide text-red-900 uppercase">
-            Sobres en negativo
-          </h2>
-          <p className="mt-1 text-sm text-red-800">
+        <section className={detalle.alerta}>
+          <h2 className={detalle.alertaTitulo}>Sobres en negativo</h2>
+          <p className={detalle.alertaTexto}>
             No se tapan solos. Si el dinero suelto alcanza, podes cubrirlo desde el mismo
             sobre.
           </p>
-          <ul className="mt-3 flex flex-col gap-2">
+          <ul className={detalle.alertaLista}>
             {enNegativo.map((sobre) => {
               const aviso = avisos.get(sobre.id)
               return (
-                <li key={sobre.id} className="rounded-xl border border-red-200 bg-white p-3">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <p className="text-sm font-medium text-slate-900">
+                <li key={sobre.id} className={detalle.alertaItem}>
+                  <div className={detalle.alertaFila}>
+                    <p className={detalle.alertaNombre}>
                       {sobre.nombre}
                       {sobre.archivado ? (
-                        <span className="ml-2 text-xs text-slate-500">(archivado)</span>
+                        <span className={detalle.archivado}>(archivado)</span>
                       ) : null}
                     </p>
-                    <p className="font-mono text-sm font-semibold text-red-700 tabular-nums">
+                    <p className={detalle.alertaValor}>
                       {formatear(sobre.disponible, cartera.moneda)}
                     </p>
                   </div>
+                  {/* El texto dice si alcanza o no; el color solo no alcanza. */}
                   {aviso?.cubre ? (
-                    <p className="mt-1 text-xs text-emerald-800">
+                    <p className={detalle.cubre}>
                       El dinero suelto alcanza para tapar este desborde.
                     </p>
                   ) : (
-                    <p className="mt-1 text-xs text-red-800">
+                    <p className={detalle.noCubre}>
                       El dinero suelto no cubre este desborde.
                     </p>
                   )}
@@ -460,103 +471,103 @@ export default async function PaginaCuentas({
         </section>
       ) : null}
 
-      <h2 className="mt-10 text-sm font-semibold tracking-wide text-slate-500 uppercase">
-        Grupos y sobres
-      </h2>
-      <p className="mt-1 text-sm text-slate-500">
-        Los grupos ordenan los sobres. No tienen presupuesto propio: su total es la suma de
-        los disponibles de los sobres que contienen.
-      </p>
-      <ul className="mt-4 flex flex-col gap-8">
-        {gruposActivos.map((grupo) => {
-          const delGrupo = sobresPorGrupo.get(grupo.id) ?? []
-          const total = totales.get(grupo.id) ?? '0.00'
-          return (
-            <li key={grupo.id}>
-              <FilaGrupo
+      <section className={producto.tarjeta}>
+        <h2 className={producto.seccionTitulo}>Grupos y sobres</h2>
+        <p className={producto.seccionBajada}>
+          Los grupos ordenan los sobres. No tienen presupuesto propio: su total es la suma de
+          los disponibles de los sobres que contienen.
+        </p>
+        <ul className={detalle.listaGrupos}>
+          {gruposActivos.map((grupo) => {
+            const delGrupo = sobresPorGrupo.get(grupo.id) ?? []
+            const total = totales.get(grupo.id) ?? '0.00'
+            return (
+              <li key={grupo.id}>
+                <FilaGrupo
+                  cartera_id={cartera.id}
+                  grupo_id={grupo.id}
+                  nombre={grupo.nombre}
+                  orden={grupo.orden}
+                />
+                {/**
+                  El total vive en un `<p>` hermano y no en la lista desplegada: R35 pide
+                  que al plegar un grupo se oculten sus sobres pero que el total siga a la
+                  vista. Por eso el `<details>` lleva `open` inicial y el total queda fuera:
+                  plegado se ven la cifra y el resumen, no los sobres.
+                */}
+                <p className={detalle.totalGrupo}>
+                  Total del grupo:{' '}
+                  <span className={detalle.totalGrupoValor}>
+                    {formatear(total, cartera.moneda)}
+                  </span>{' '}
+                  en {delGrupo.length}{' '}
+                  {delGrupo.length === 1 ? 'sobre' : 'sobres'}
+                </p>
+                <details className={detalle.desplegable} open>
+                  <summary className={detalle.resumen}>Ver sobres</summary>
+                  <ul className={detalle.sublista}>
+                    {delGrupo.map((sobre) => (
+                      <FilaSobre
+                        key={sobre.id}
+                        cartera_id={cartera.id}
+                        sobre_id={sobre.id}
+                        nombre={sobre.nombre}
+                        disponible={sobre.disponible}
+                        negativo={sobre.negativo}
+                        eliminable={sobre.eliminable}
+                        periodo={periodo}
+                        moneda={cartera.moneda}
+                        grupo_id={sobre.grupo_id}
+                        grupos={gruposActivos.map((g) => ({ id: g.id, nombre: g.nombre }))}
+                        otrosSobres={sobres
+                          .filter((otro) => otro.id !== sobre.id)
+                          .map((otro) => ({ id: otro.id, nombre: otro.nombre }))}
+                        dinero_suelto={avisos.get(sobre.id)?.cubre ? resumen.dinero_suelto : ''}
+                        asignaciones={asignacionesPorSobre.get(sobre.id) ?? []}
+                      />
+                    ))}
+                    {delGrupo.length === 0 ? (
+                      <li className={detalle.vacioItem}>
+                        Este grupo todavia no tiene sobres.
+                      </li>
+                    ) : null}
+                  </ul>
+                </details>
+              </li>
+            )
+          })}
+        </ul>
+        {gruposActivos.length === 0 ? (
+          <p className={detalle.vacio}>Todavia no hay grupos en esta cartera.</p>
+        ) : null}
+        {gruposArchivados.length > 0 ? (
+          <ul className={`${detalle.lista} ${detalle.listaCercana}`}>
+            {gruposArchivados.map((grupo) => (
+              <FilaGrupoArchivado
+                key={grupo.id}
                 cartera_id={cartera.id}
                 grupo_id={grupo.id}
                 nombre={grupo.nombre}
-                orden={grupo.orden}
               />
-              {/**
-                El total vive en un `<p>` hermano y no en la lista desplegada: R35 pide
-                que al plegar un grupo se oculten sus sobres pero que el total siga a la
-                vista. Por eso el `<details>` lleva `open` inicial y el total queda fuera:
-                plegado se ven la cifra y el resumen, no los sobres.
-              */}
-              <p className="mt-2 ml-4 text-sm text-slate-500">
-                Total del grupo:{' '}
-                <span className="font-mono font-semibold text-slate-900 tabular-nums">
-                  {formatear(total, cartera.moneda)}
-                </span>{' '}
-                en {delGrupo.length}{' '}
-                {delGrupo.length === 1 ? 'sobre' : 'sobres'}
-              </p>
-              <details className="mt-2" open>
-                <summary className="cursor-pointer text-sm text-slate-500 hover:text-slate-900">
-                  Ver sobres
-                </summary>
-                <ul className="mt-3 ml-4 flex flex-col gap-3 border-l border-slate-200 pl-4">
-                {delGrupo.map((sobre) => (
-                  <FilaSobre
-                    key={sobre.id}
-                    cartera_id={cartera.id}
-                    sobre_id={sobre.id}
-                    nombre={sobre.nombre}
-                    disponible={sobre.disponible}
-                    negativo={sobre.negativo}
-                    eliminable={sobre.eliminable}
-                    periodo={periodo}
-                    moneda={cartera.moneda}
-                    grupo_id={sobre.grupo_id}
-                    grupos={gruposActivos.map((g) => ({ id: g.id, nombre: g.nombre }))}
-                    otrosSobres={sobres
-                      .filter((otro) => otro.id !== sobre.id)
-                      .map((otro) => ({ id: otro.id, nombre: otro.nombre }))}
-                    dinero_suelto={avisos.get(sobre.id)?.cubre ? resumen.dinero_suelto : ''}
-                    asignaciones={asignacionesPorSobre.get(sobre.id) ?? []}
-                  />
-                ))}
-                {delGrupo.length === 0 ? (
-                  <li className="rounded-xl border border-dashed border-slate-300 p-4 text-sm text-slate-500">
-                    Este grupo todavia no tiene sobres.
-                  </li>
-                ) : null}
-                </ul>
-              </details>
-            </li>
-          )
-        })}
-      </ul>
-      {gruposActivos.length === 0 ? (
-        <p className="mt-4 rounded-2xl border border-dashed border-slate-300 p-6 text-sm text-slate-500">
-          Todavia no hay grupos en esta cartera.
-        </p>
-      ) : null}
-      {gruposArchivados.length > 0 ? (
-        <ul className="mt-3 flex flex-col gap-2">
-          {gruposArchivados.map((grupo) => (
-            <FilaGrupoArchivado
-              key={grupo.id}
-              cartera_id={cartera.id}
-              grupo_id={grupo.id}
-              nombre={grupo.nombre}
-            />
-          ))}
-        </ul>
-      ) : null}
+            ))}
+          </ul>
+        ) : null}
+      </section>
 
-      <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900">Nuevo grupo</h2>
+      <section className={producto.tarjeta}>
+        <h2 className={producto.seccionTitulo}>Nuevo grupo</h2>
         <FormularioNuevoGrupo cartera_id={cartera.id} />
       </section>
 
-      <h2 className="mt-10 text-sm font-semibold tracking-wide text-slate-500 uppercase">
-        Cuentas
-      </h2>
-      <ul className="mt-4 flex flex-col gap-3">
-        {activas.map((cuenta) => (
+      <section className={producto.tarjeta}>
+        <h2 className={producto.seccionTitulo}>Cuentas</h2>
+        {/*
+          R24 pide que las archivadas salgan de la lista de cuentas. Van dentro de la misma
+          tarjeta, debajo de las activas, en vez de en una tarjeta aparte: son el mismo
+          conjunto de datos y partirlo obliga a volver arriba a seguir leyendo.
+        */}
+        <ul className={detalle.lista}>
+          {activas.map((cuenta) => (
           <FilaCuenta
             key={cuenta.id}
             cartera_id={cartera.id}
@@ -569,44 +580,40 @@ export default async function PaginaCuentas({
             tieneMovimientos={conMovimiento.get(cuenta.id) ?? false}
           />
         ))}
-      </ul>
+        </ul>
 
-      {activas.length === 0 ? (
-        <p className="mt-6 rounded-2xl border border-dashed border-slate-300 p-6 text-sm text-slate-500">
-          Todavia no hay cuentas en esta cartera.
-        </p>
-      ) : null}
+        {activas.length === 0 ? (
+          <p className={detalle.vacio}>Todavia no hay cuentas en esta cartera.</p>
+        ) : null}
 
-      {archivadas.length > 0 ? (
-        <>
-          <h2 className="mt-10 text-sm font-semibold tracking-wide text-slate-500 uppercase">
-            Archivadas
-          </h2>
-          <ul className="mt-3 flex flex-col gap-3">
-            {archivadas.map((cuenta) => (
-              <FilaCuentaArchivada
-                key={cuenta.id}
-                cartera_id={cartera.id}
-                cuenta_id={cuenta.id}
-                nombre={cuenta.nombre}
-                saldo={saldoArchivada.get(cuenta.id) ?? '0.00'}
-                moneda={cartera.moneda}
-              />
-            ))}
-          </ul>
-        </>
-      ) : null}
+        {archivadas.length > 0 ? (
+          <>
+            <hr className={producto.division} />
+            <h3 className={producto.subtitulo}>Archivadas</h3>
+            <ul className={detalle.lista}>
+              {archivadas.map((cuenta) => (
+                <FilaCuentaArchivada
+                  key={cuenta.id}
+                  cartera_id={cartera.id}
+                  cuenta_id={cuenta.id}
+                  nombre={cuenta.nombre}
+                  saldo={saldoArchivada.get(cuenta.id) ?? '0.00'}
+                  moneda={cartera.moneda}
+                />
+              ))}
+            </ul>
+          </>
+        ) : null}
+      </section>
 
       {archivadosPlanos.length > 0 ? (
-        <>
-          <h2 className="mt-10 text-sm font-semibold tracking-wide text-slate-500 uppercase">
-            Sobres archivados
-          </h2>
-          <p className="mt-1 text-sm text-slate-500">
+        <section className={producto.tarjeta}>
+          <h2 className={producto.seccionTitulo}>Sobres archivados</h2>
+          <p className={producto.seccionBajada}>
             Un sobre archivado conserva su historial y sigue admitiendo devoluciones, pero no
             recibe asignaciones.
           </p>
-          <ul className="mt-3 flex flex-col gap-2">
+          <ul className={detalle.lista}>
             {archivadosPlanos
               .filter((sobre) => !sobre.negativo)
               .map((sobre) => (
@@ -622,19 +629,23 @@ export default async function PaginaCuentas({
                 />
               ))}
           </ul>
-        </>
+        </section>
       ) : null}
 
       {archivadosConSaldo.length > 0 ? (
-        <>
-          <h2 className="mt-8 text-sm font-semibold tracking-wide text-amber-700 uppercase">
+        <section className={producto.tarjeta}>
+          {/*
+            Este es el unico titulo de seccion con color de atencion: son sobres archivados
+            con disponible sin destino, y no es lo mismo que "archivados" a secas.
+          */}
+          <h2 className={`${producto.seccionTitulo} ${producto.seccionTituloAtencion}`}>
             Archivados con dinero
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className={producto.seccionBajada}>
             Recibieron devoluciones y siguen archivados: el disponible quedo sin destino. Los
             que estan en negativo ya salen arriba, en rojo.
           </p>
-          <ul className="mt-3 flex flex-col gap-2">
+          <ul className={detalle.lista}>
             {archivadosConSaldo.map((sobre) => (
               <FilaSobreArchivado
                 key={sobre.id}
@@ -648,13 +659,13 @@ export default async function PaginaCuentas({
               />
             ))}
           </ul>
-        </>
+        </section>
       ) : null}
 
       {gruposActivos.length > 0 ? (
-        <section className="mt-10 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">Nuevo sobre</h2>
-          <p className="mt-1 mb-5 text-sm text-slate-500">
+        <section className={producto.tarjeta}>
+          <h2 className={producto.seccionTitulo}>Nuevo sobre</h2>
+          <p className={producto.seccionBajada}>
             El sobre nace con disponible cero: no tiene asignaciones ni movimientos todavia.
           </p>
           <FormularioNuevoSobre
@@ -664,89 +675,91 @@ export default async function PaginaCuentas({
         </section>
       ) : null}
 
-      <section className="mt-10 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900">Nueva cuenta</h2>
-        <p className="mt-1 mb-5 text-sm text-slate-500">
+      <section className={producto.tarjeta}>
+        <h2 className={producto.seccionTitulo}>Nueva cuenta</h2>
+        <p className={producto.seccionBajada}>
           El saldo inicial es lo que hay hoy. El saldo real se calcula solo con los movimientos.
         </p>
         <FormularioNuevaCuenta cartera_id={cartera.id} />
       </section>
 
-      <h2 className="mt-10 text-sm font-semibold tracking-wide text-slate-500 uppercase">
-        Movimientos
-      </h2>
-      <p className="mt-1 text-sm text-slate-500">
-        El saldo de cada cuenta sale de su saldo inicial mas estos movimientos. Un movimiento sin
-        sobre queda pendiente: su dinero esta en la cuenta y todavia no tiene destino.
-      </p>
-      {activas.length > 0 ? (
-        <>
-          <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-semibold text-slate-900">Nuevo movimiento</h3>
-            <p className="mt-1 mb-5 text-sm text-slate-500">
-              Una devolucion es un ingreso con sobre: el sobre recupera lo gastado.
-            </p>
-            <FormularioNuevoMovimiento
-              cartera_id={cartera.id}
-              cuentas={activas.map((cuenta) => ({ id: cuenta.id, nombre: cuenta.nombre }))}
-              sobres={sobres.map((sobre) => ({ id: sobre.id, nombre: sobre.nombre }))}
-              periodo={periodo}
-            />
-          </section>
+      <section className={producto.tarjeta}>
+        <h2 className={producto.seccionTitulo}>Movimientos</h2>
+        <p className={producto.seccionBajada}>
+          El saldo de cada cuenta sale de su saldo inicial mas estos movimientos. Un movimiento sin
+          sobre queda pendiente: su dinero esta en la cuenta y todavia no tiene destino.
+        </p>
 
-          {/*
-            Los traspasos van en su propia seccion y no como un tipo mas del formulario de
-            arriba, por dos razones que son de R2. Una: un traspaso no puede llevar sobre, y el
-            formulario de movimiento no tiene forma de no ofrecerlo. Dos: el alta de traspaso
-            pide **dos** cuentas, y ese par no cabe en el select de cuenta unica.
-
-            Solo sale con dos o mas cuentas activas: con una sola no hay traspaso posible, y
-            R1 prohibe el alta vacia. No es un caso raro, es el estado de una cartera recien
-            creada.
-          */}
-          {activas.length > 1 ? (
-            <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-slate-900">Nuevo traspaso</h3>
-              <p className="mt-1 mb-5 text-sm text-slate-500">
-                Mueve dinero entre dos cuentas de esta cartera sin tocar ningun sobre. No puede
-                cruzar carteras: cada una tiene su moneda y no hay conversion.
+        {activas.length > 0 ? (
+          <div className={producto.subbloques}>
+            <div>
+              <h3 className={producto.seccionTitulo}>Nuevo movimiento</h3>
+              <p className={producto.seccionBajada}>
+                Una devolucion es un ingreso con sobre: el sobre recupera lo gastado.
               </p>
-              <FormularioNuevoTraspaso
+              <FormularioNuevoMovimiento
                 cartera_id={cartera.id}
                 cuentas={activas.map((cuenta) => ({ id: cuenta.id, nombre: cuenta.nombre }))}
+                sobres={sobres.map((sobre) => ({ id: sobre.id, nombre: sobre.nombre }))}
                 periodo={periodo}
               />
-            </section>
-          ) : null}
-        </>
-      ) : null}
+            </div>
 
-      <div className="mt-8">
-        <ListaMovimientos
-          cartera_id={cartera.id}
-          movimientos={movimientos}
-          cuentas={activas.map((cuenta) => ({ id: cuenta.id, nombre: cuenta.nombre }))}
-          sobres={sobres.map((sobre) => ({ id: sobre.id, nombre: sobre.nombre }))}
-          moneda={cartera.moneda}
-          periodo={periodo}
-          filtro={{
-            texto: filtroUrl.datos.texto,
-            cuenta_id: filtroUrl.datos.cuenta_id,
-            sobre_id: filtroUrl.datos.sobre_id,
-            tipo: filtroUrl.datos.tipo ?? '',
-            desde: filtroUrl.datos.desde,
-            hasta: filtroUrl.datos.hasta,
-          }}
-          hayFiltro={hayFiltro}
-          filtroInvalido={!filtroUrl.valido}
-        />
+            {/*
+              Los traspasos van en su propia seccion y no como un tipo mas del formulario de
+              arriba, por dos razones que son de R2. Una: un traspaso no puede llevar sobre, y el
+              formulario de movimiento no tiene forma de no ofrecerlo. Dos: el alta de traspaso
+              pide **dos** cuentas, y ese par no cabe en el select de cuenta unica.
 
-        <ListaMovimientosEliminados
-          cartera_id={cartera_id}
-          movimientos={eliminados}
-          moneda={cartera.moneda}
-          eliminados_en={eliminadosEn}
-        />
+              Solo sale con dos o mas cuentas activas: con una sola no hay traspaso posible, y
+              R1 prohibe el alta vacia. No es un caso raro, es el estado de una cartera recien
+              creada.
+            */}
+            {activas.length > 1 ? (
+              <div>
+                <h3 className={producto.seccionTitulo}>Nuevo traspaso</h3>
+                <p className={producto.seccionBajada}>
+                  Mueve dinero entre dos cuentas de esta cartera sin tocar ningun sobre. No puede
+                  cruzar carteras: cada una tiene su moneda y no hay conversion.
+                </p>
+                <FormularioNuevoTraspaso
+                  cartera_id={cartera.id}
+                  cuentas={activas.map((cuenta) => ({ id: cuenta.id, nombre: cuenta.nombre }))}
+                  periodo={periodo}
+                />
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className={producto.subbloques}>
+          <ListaMovimientos
+            cartera_id={cartera.id}
+            movimientos={movimientos}
+            cuentas={activas.map((cuenta) => ({ id: cuenta.id, nombre: cuenta.nombre }))}
+            sobres={sobres.map((sobre) => ({ id: sobre.id, nombre: sobre.nombre }))}
+            moneda={cartera.moneda}
+            periodo={periodo}
+            filtro={{
+              texto: filtroUrl.datos.texto,
+              cuenta_id: filtroUrl.datos.cuenta_id,
+              sobre_id: filtroUrl.datos.sobre_id,
+              tipo: filtroUrl.datos.tipo ?? '',
+              desde: filtroUrl.datos.desde,
+              hasta: filtroUrl.datos.hasta,
+            }}
+            hayFiltro={hayFiltro}
+            filtroInvalido={!filtroUrl.valido}
+          />
+
+          <ListaMovimientosEliminados
+            cartera_id={cartera_id}
+            movimientos={eliminados}
+            moneda={cartera.moneda}
+            eliminados_en={eliminadosEn}
+          />
+        </div>
+      </section>
       </div>
     </main>
   )

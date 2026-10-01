@@ -25,6 +25,7 @@ import {
   type ResultadoDeGrupo,
 } from '../grupos/acciones'
 import { Aviso, Boton, Campo } from './sesion'
+import detalle from './detalle.module.css'
 
 const INICIAL = { ok: false, error: undefined, campos: undefined, aviso: undefined } as const
 
@@ -40,7 +41,7 @@ export function FormularioNuevoGrupo({ cartera_id }: { cartera_id: number }) {
   )
 
   return (
-    <form action={accion} className="flex flex-col gap-4">
+    <form action={accion} className={detalle.formulario}>
       {estado.error ? <Aviso tono="error">{estado.error}</Aviso> : null}
       {estado.aviso ? <Aviso tono="exito">{estado.aviso}</Aviso> : null}
       <Campo
@@ -86,17 +87,17 @@ export function FilaGrupo({
   )
 
   return (
-    <li className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="flex items-center justify-between gap-3">
+    <li className={detalle.item}>
+      <div className={detalle.itemEncabezado}>
         <div>
-          <p className="font-medium text-slate-900">{nombre}</p>
-          <p className="text-xs text-slate-500">posicion {orden}</p>
+          <p className={detalle.itemNombre}>{nombre}</p>
+          <p className={detalle.itemDetalle}>posicion {orden}</p>
         </div>
         <button
           type="button"
           onClick={() => setPlegado((antes) => !antes)}
           aria-expanded={!plegado}
-          className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700"
+          className={detalle.pliegue}
         >
           {plegado ? 'Desplegar' : 'Plegar'}
         </button>
@@ -108,27 +109,27 @@ export function FilaGrupo({
       {estado.aviso ? <Aviso tono="exito">{estado.aviso}</Aviso> : null}
 
       {plegado ? null : (
-        <div className="mt-3">
+        <div className={detalle.formularioCercano}>
           {children ?? (
-            <p className="text-sm text-slate-500">
+            <p className={detalle.itemDetalle}>
               Todavia no hay sobres en este grupo.
             </p>
           )}
         </div>
       )}
 
-      <details className="mt-3">
-        <summary className="cursor-pointer text-xs text-slate-500">Editar grupo</summary>
+      <details className={detalle.desplegable}>
+        <summary className={detalle.resumen}>Editar grupo</summary>
 
-        <form action={renombrar} className="mt-3 flex items-end gap-2">
-          <div className="flex-1">
+        <form action={renombrar} className={detalle.formularioCercano}>
+          <div className={detalle.crece}>
             <Campo nombre="nombre" etiqueta="Nuevo nombre" error={estado.campos?.nombre} />
           </div>
           <AccionPendiente>Renombrar</AccionPendiente>
         </form>
 
-        <form action={reordenar} className="mt-3 flex items-end gap-2">
-          <div className="flex-1">
+        <form action={reordenar} className={detalle.formularioCercano}>
+          <div className={detalle.crece}>
             <Campo
               nombre="orden"
               etiqueta="Posicion"
@@ -139,10 +140,10 @@ export function FilaGrupo({
           <AccionPendiente>Mover</AccionPendiente>
         </form>
 
-        <form action={archivar} className="mt-3">
+        <form action={archivar} className={detalle.formularioCercano}>
           <AccionPendiente>Archivar grupo</AccionPendiente>
         </form>
-        <p className="mt-1 text-xs text-slate-500">
+        <p className={detalle.nota}>
           Archivar un grupo no borra sus sobres ni cambia sus disponibles: solo deja de
           aparecer en el agrupamiento.
         </p>
@@ -167,9 +168,9 @@ export function FilaGrupoArchivado({
   )
 
   return (
-    <li className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-slate-600">{nombre}</p>
+    <li className={`${detalle.item} ${detalle.itemArchivado}`}>
+      <div className={detalle.itemEncabezado}>
+        <p className={detalle.itemNombre}>{nombre}</p>
         <form action={restaurar}>
           <AccionPendiente>Restaurar</AccionPendiente>
         </form>

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { FormularioEntrar } from '@/components/formularios-sesion'
 import { PantallaSesion } from '@/components/sesion'
 import { sesionActual } from '@/sesion/server'
+import estilos from '../sesion.module.css'
 
 export const metadata = { title: 'Entrar' }
 
@@ -17,7 +18,7 @@ export default async function PaginaEntrar() {
       pie={
         <>
           No tienes cuenta?{' '}
-          <Link href="/registro" className="font-semibold text-blue-600 hover:underline">
+          <Link href="/registro" className={estilos.pieEnlace}>
             Registrate
           </Link>
         </>

@@ -3,6 +3,8 @@ import { FormularioCambiarContrasena, FormularioDatosPerfil } from '@/components
 import { sesionActual } from '@/sesion/server'
 import { obtenerCliente } from '@/db/cliente'
 import { buscarPorId } from '@/repos/usuarios'
+import producto from '@/components/producto.module.css'
+import tema from '@/components/tema-oscuro.module.css'
 
 export const metadata = { title: 'Perfil' }
 
@@ -13,6 +15,11 @@ export const metadata = { title: 'Perfil' }
  * es el grupo de las pantallas sin sesion: se veian sin la barra de navegacion, y
  * desde ahi no se llegaba a ningun lado. Ahora conviven los dos formularios, que es
  * lo que el usuario espera de una pantalla de perfil.
+ *
+ * Se compone de dos modulos: `producto.module.css` da el contenedor y las tarjetas, y
+ * `tema-oscuro.module.css` la paleta y las primitivas. Los formularios de adentro son
+ * `Campo`, `Boton` y `Aviso` compartidos, que el tema repinta por descendencia: no hay una
+ * version oscura de `formularios-sesion.tsx`.
  */
 export default async function PaginaPerfil() {
   const sesion = await sesionActual()
@@ -27,33 +34,40 @@ export default async function PaginaPerfil() {
   if (!usuario) redirect('/entrar')
 
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-8 px-4 py-10">
-      <header>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Tu perfil</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Sesion de {usuario.nombre_usuario}. Tu nombre de usuario y tu zona horaria no se
-          pueden cambiar.
-        </p>
-      </header>
+    <main className={`${producto.pantalla} ${tema.oscuro}`}>
+      <div className={tema.rejilla} aria-hidden="true" />
+        <div className={tema.aurora} aria-hidden="true" />
+        <div className={tema.grano} aria-hidden="true" />
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-5 text-lg font-semibold text-slate-900">Tus datos</h2>
-        <FormularioDatosPerfil
-          nombre={usuario.nombre}
-          apellido={usuario.apellido}
-          correo={usuario.correo}
-          nombre_usuario={usuario.nombre_usuario}
-          zona_horaria={usuario.zona_horaria}
-        />
-      </section>
+      <div className={`${producto.contenido} ${producto.contenidoEstrecho}`}>
+        <header className={producto.encabezado}>
+          <h1 className={producto.titulo}>Tu perfil</h1>
+          <p className={producto.bajada}>
+            Sesion de {usuario.nombre_usuario}. Tu nombre de usuario y tu zona horaria no se
+            pueden cambiar.
+          </p>
+        </header>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-1 text-lg font-semibold text-slate-900">Tu contrasena</h2>
-        <p className="mb-5 text-sm text-slate-500">
-          Al cambiarla se cierran tus otras sesiones abiertas.
-        </p>
-        <FormularioCambiarContrasena />
-      </section>
+        <section className={producto.tarjeta}>
+          <h2 className={producto.seccionTitulo}>Tus datos</h2>
+          <hr className={producto.division} />
+          <FormularioDatosPerfil
+            nombre={usuario.nombre}
+            apellido={usuario.apellido}
+            correo={usuario.correo}
+            nombre_usuario={usuario.nombre_usuario}
+            zona_horaria={usuario.zona_horaria}
+          />
+        </section>
+
+        <section className={producto.tarjeta}>
+          <h2 className={producto.seccionTitulo}>Tu contrasena</h2>
+          <p className={producto.seccionBajada}>
+            Al cambiarla se cierran tus otras sesiones abiertas.
+          </p>
+          <FormularioCambiarContrasena />
+        </section>
+      </div>
     </main>
   )
 }

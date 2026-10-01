@@ -13,6 +13,32 @@
  */
 
 import type { HTMLInputTypeAttribute, ReactNode } from 'react'
+import Link from 'next/link'
+import sesion from '../app/(sesion)/sesion.module.css'
+import tema from './tema-oscuro.module.css'
+import { BotonTema } from './boton-tema'
+
+/**
+ * El sobre de la marca, dibujado igual que el de la portada.
+ *
+ * Va aca y no se importa de la portada porque `page.tsx` es una pagina: importarla traeria
+ * el modulo entero y ademas su `metadata` al arbol de las pantallas de sesion. Un icono de
+ * seis lineas no justifica eso.
+ */
+function IconoSobre({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+    >
+      <rect x="2" y="5" width="20" height="14" rx="2.5" />
+      <path d="M2 10h20v2.2H2z" />
+      <path d="M4.4 6.6 12 12.4l7.6-5.8 1.5 1.9L12 15.2 2.9 8.5z" />
+    </svg>
+  )
+}
 
 /** Aviso general, arriba del formulario. */
 export function Aviso({
@@ -239,7 +265,21 @@ export function AvisoRetroactivo({
   )
 }
 
-/** Marco centrado de las pantallas de sesion. */
+/*
+ * Marco centrado de las pantallas de sesion.
+ *
+ * Se compone de DOS modulos a proposito:
+ *
+ *  - `(sesion)/sesion.module.css` aporta lo propio de estas dos pantallas: auroras, grano,
+ *    tarjeta y pie. Se importa aca y no en las paginas porque ambas comparten este marco.
+ *  - `tema-oscuro.module.css` aporta la paleta y el formato de `Campo`, `Boton` y `Aviso`.
+ *    Va en la clase `oscuro`, no en una version oscura de esas primitivas: las pantallas de
+ *    producto las usan y siguen claras, y dos copias del mismo campo se desincronizan en el
+ *    primer cambio.
+ *
+ * Se mantiene `main` con el `aria-label`: es la unica region de la pagina, asi que asi se
+ * anuncia en un lector de pantalla.
+ */
 export function PantallaSesion({
   titulo,
   subtitulo,
@@ -252,19 +292,40 @@ export function PantallaSesion({
   pie?: ReactNode
 }) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <p className="text-2xl font-bold tracking-tight text-blue-600">Sobres</p>
-          <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900">{titulo}</h1>
-          {subtitulo ? <p className="mt-1 text-sm text-slate-500">{subtitulo}</p> : null}
+    <main aria-label={titulo} className={`${sesion.pantalla} ${tema.oscuro}`}>
+      <div aria-hidden="true" className={sesion.aurora}>
+        <span />
+      </div>
+      <div aria-hidden="true" className={tema.rejilla} />
+      <div aria-hidden="true" className={tema.grano} />
+
+      <div className={sesion.temaEsquina}>
+        <BotonTema />
+      </div>
+
+      {/*
+       * La tarjeta y el pie van dentro de una columna. `.pantalla` es un flex con
+       * `justify-content: center`, asi que como hermanos el pie se alineaba AL LADO de la
+       * caja en vez de debajo. Este wrapper es lo que los apila.
+       */}
+      <div className={sesion.columna}>
+        <div className={sesion.tarjeta}>
+          <div className={sesion.encabezado}>
+            <Link href="/" className={sesion.marca}>
+              <span className={sesion.marcaIcono}>
+                <IconoSobre className="h-4.5 w-4.5" />
+              </span>
+              Sobres
+            </Link>
+
+            <h1 className={sesion.titular}>{titulo}</h1>
+            {subtitulo ? <p className={sesion.subtitulo}>{subtitulo}</p> : null}
+          </div>
+
+          <div className="flex flex-col gap-5">{children}</div>
         </div>
 
-        <div className="flex flex-col gap-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          {children}
-        </div>
-
-        {pie ? <div className="mt-6 text-center text-sm text-slate-500">{pie}</div> : null}
+        {pie ? <p className={sesion.pie}>{pie}</p> : null}
       </div>
     </main>
   )

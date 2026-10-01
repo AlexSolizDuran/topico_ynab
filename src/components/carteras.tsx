@@ -3,9 +3,14 @@
 /**
  * Vista de carteras.
  *
- * Lo unico de este archivo que es de cliente es el estado del formulario, por
- * `useActionState`. Las reglas —la moneda no se cambia, una cartera archivada no
- * opera, no se suman carteras— estan en el repositorio y en la pagina, no aqui.
+ * Lo unico de este archivo que es de cliente es el estado de los formularios, por
+ * `useActionState`. Las reglas —la moneda no se cambia, una cartera archivada no opera, no se
+ * suman carteras— estan en el repositorio y en la pagina, no aqui.
+ *
+ * Las clases salen de `carteras.module.css` y la paleta de `tema-oscuro.module.css`. No se
+ * escriben utilidades de color sueltas: cualquier `text-slate-*` que se colara aqui seria
+ * texto oscuro sobre fondo oscuro, que es el fallo que todavia arrastran las pantallas de
+ * producto sin migrar.
  */
 
 import { useActionState } from 'react'
@@ -20,6 +25,7 @@ import {
 import { MONEDA_POR_DEFECTO, MONEDAS, etiquetaMoneda } from '../carteras/monedas'
 import { NOMBRE_CARTERA_MAXIMO } from '../carteras/validacion'
 import { Aviso, Boton, Campo } from './sesion'
+import estilos from './carteras.module.css'
 
 const INICIAL = { ok: false, error: undefined, campos: undefined, aviso: undefined } as const
 
@@ -32,39 +38,43 @@ export function FormularioNuevaCartera() {
   const [estado, accion] = useActionState(accionCrearCartera, INICIAL)
 
   return (
-    <form action={accion} className="flex flex-col gap-4">
+    <form action={accion}>
       {estado.error ? <Aviso tono="error">{estado.error}</Aviso> : null}
       {estado.aviso ? <Aviso tono="exito">{estado.aviso}</Aviso> : null}
 
-      <Campo
-        nombre="nombre"
-        etiqueta="Nombre de la cartera"
-        error={estado.campos?.nombre}
-        ayuda={`Hasta ${NOMBRE_CARTERA_MAXIMO} caracteres.`}
-      />
+      <div className={estilos.filaForm}>
+        <Campo
+          nombre="nombre"
+          etiqueta="Nombre de la cartera"
+          error={estado.campos?.nombre}
+          ayuda={`Hasta ${NOMBRE_CARTERA_MAXIMO} caracteres.`}
+        />
 
-      <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium text-slate-700">Moneda</span>
-        <select
-          name="moneda"
-          defaultValue={MONEDA_POR_DEFECTO}
-          className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
-        >
-          {MONEDAS.map((moneda) => (
-            <option key={moneda.codigo} value={moneda.codigo}>
-              {etiquetaMoneda(moneda)}
-            </option>
-          ))}
-        </select>
-        <span className="text-xs text-slate-500">
-          La moneda se define aqui y no se puede cambiar despues.
-        </span>
-        {estado.campos?.moneda ? (
-          <span className="text-xs text-red-600">{estado.campos.moneda}</span>
-        ) : null}
-      </label>
+        {/*
+         * El desplegable de moneda NO usa `Campo`. Es el unico select de la pantalla y su
+         * opcion depende de una lista que se importa; `Campo` resuelve la etiqueta y el
+         * error por su cuenta, asi que reutilizarlo obligaria a duplicar ese cableado. Las
+         * clases del `select` las pinta `tema-oscuro.module.css` por descendencia.
+         */}
+        <label className={estilos.campo}>
+          <span>Moneda</span>
+          <select name="moneda" defaultValue={MONEDA_POR_DEFECTO}>
+            {MONEDAS.map((moneda) => (
+              <option key={moneda.codigo} value={moneda.codigo}>
+                {etiquetaMoneda(moneda)}
+              </option>
+            ))}
+          </select>
+          <span className={estilos.nota}>Se define aca y no se cambia despues.</span>
+          {estado.campos?.moneda ? (
+            <span className={estilos.notaError}>{estado.campos.moneda}</span>
+          ) : null}
+        </label>
+      </div>
 
-      <AccionPendiente>Crear cartera</AccionPendiente>
+      <div className={estilos.crear}>
+        <AccionPendiente>Crear cartera</AccionPendiente>
+      </div>
     </form>
   )
 }
@@ -89,36 +99,38 @@ export function FilaCarteraActiva({
   )
 
   return (
-    <li className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="font-medium text-slate-900">{nombre}</p>
-          <p className="text-xs text-slate-500">Moneda {moneda}</p>
-        </div>
-        <a
-          href={`/cartera/${cartera_id}`}
-          className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
-        >
-          Entrar
-        </a>
+    <li className={estilos.item}>
+      <div className={estilos.itemInfo}>
+        <p className={estilos.itemNombre}>{nombre}</p>
+        <span className={estilos.itemMoneda}>{moneda}</span>
       </div>
 
-      {estado.aviso ? <Aviso tono="exito">{estado.aviso}</Aviso> : null}
-      {estado.error ? <Aviso tono="error">{estado.error}</Aviso> : null}
-      {estadoArchivo.error ? <Aviso tono="error">{estadoArchivo.error}</Aviso> : null}
+      <a href={`/cartera/${cartera_id}`} className={estilos.entrar}>
+        Entrar
+      </a>
 
-      <details className="mt-3">
-        <summary className="cursor-pointer text-xs text-slate-500">Editar o archivar</summary>
-        <form action={renombrar} className="mt-3 flex items-end gap-2">
-          <div className="flex-1">
-            <Campo nombre="nombre" etiqueta="Nuevo nombre" error={estado.campos?.nombre} />
+      {/*
+       * Renombrar y archivar van plegados. Son operaciones de vez en cuando y no pueden
+       * competir en jerarquia con "Entrar", que es lo que se hace en el 95% de las visitas.
+       */}
+      <div className={estilos.pie}>
+        {estado.aviso ? <Aviso tono="exito">{estado.aviso}</Aviso> : null}
+        {estado.error ? <Aviso tono="error">{estado.error}</Aviso> : null}
+        {estadoArchivo.error ? <Aviso tono="error">{estadoArchivo.error}</Aviso> : null}
+
+        <details className={estilos.detalles}>
+          <summary className={estilos.resumen}>Editar o archivar</summary>
+          <div className={estilos.acciones}>
+            <form action={renombrar}>
+              <Campo nombre="nombre" etiqueta="Nuevo nombre" error={estado.campos?.nombre} />
+              <AccionPendiente>Renombrar</AccionPendiente>
+            </form>
+            <form action={archivar}>
+              <AccionPendiente>Archivar cartera</AccionPendiente>
+            </form>
           </div>
-          <AccionPendiente>Renombrar</AccionPendiente>
-        </form>
-        <form action={archivar} className="mt-2">
-          <AccionPendiente>Archivar cartera</AccionPendiente>
-        </form>
-      </details>
+        </details>
+      </div>
     </li>
   )
 }
@@ -139,19 +151,22 @@ export function FilaCarteraArchivada({
   )
 
   return (
-    <li className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="font-medium text-slate-700">{nombre}</p>
-          <p className="text-xs text-slate-500">
-            Moneda {moneda} · archivada, con sus datos
-          </p>
-        </div>
-        <form action={restaurar}>
-          <AccionPendiente>Restaurar</AccionPendiente>
-        </form>
+    <li className={`${estilos.item} ${estilos.archivada}`}>
+      <div className={estilos.itemInfo}>
+        <p className={estilos.itemNombre}>{nombre}</p>
+        <span className={estilos.itemMoneda}>{moneda}</span>
+        <p className={estilos.itemMeta}>Archivada, con sus datos</p>
       </div>
-      {estado.error ? <Aviso tono="error">{estado.error}</Aviso> : null}
+
+      <form action={restaurar}>
+        <AccionPendiente>Restaurar</AccionPendiente>
+      </form>
+
+      {estado.error ? (
+        <div className={estilos.pie}>
+          <Aviso tono="error">{estado.error}</Aviso>
+        </div>
+      ) : null}
     </li>
   )
 }

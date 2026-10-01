@@ -1,0 +1,1205 @@
+/*
+ * Formato del detalle de una cartera y de los componentes que se renderizan adentro.
+ *
+ * Un solo modulo para la pagina y para `cuentas`, `grupos`, `sobres`, `transacciones`,
+ * `traspasos`, `metas`, `recurrencias` y `patrimonio`. Antes cada uno traia su propia copia de
+ * "tarjeta blanca con sombra", "seccion en versalitas" y "lista con bordes": nueve archivos con
+ * el mismo padding y el mismo color de fondo, que se desincronizan en el primer ajuste y que
+ * ademas hay que mantener en claro y en oscuro.
+ *
+ * Acá vive una sola vez. La paleta y las primitivas van en `tema-oscuro.module.css`, y el
+ * contenedor en `producto.module.css`.
+ *
+ * Dos decisiones que se repiten en toda la hoja:
+ *
+ *  - El relleno de las listas es un filete, no un borde por item. Con veinte movimientos, veinte
+ *    cajas son ruido; con filetes, la lista se lee como una columna y el hover marca la fila.
+ *
+ *  - Los importes usan `tabular-nums`. Es la unica forma de que las cifras de una fila se
+ *    alineen en el signo y en el decimal, que es lo que hace comparables dos saldos.
+ */
+
+/* --------------------------------------------------------------------- encabezados */
+
+/* Migas de pan: la ruta de vuelta, arriba del todo y sin peso visual. */
+.migas {
+  font-size: 0.75rem;
+  color: var(--tinta-tenue);
+}
+
+.migasEnlace:hover {
+  color: var(--lima);
+  text-decoration: underline;
+}
+
+/*
+ * El antetitulo de seccion (`producto.seccionTitulo`) y la bajada (`producto.seccionBajada`) no
+ * se redefinen aca: son el mismo formato en toda la app y viven en el modulo del shell.
+ */
+
+/* ------------------------------------------------------------------------- listas */
+
+.lista {
+  margin: 1.25rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.listaCercana {
+  margin-top: 0.75rem;
+}
+
+/* Los grupos se separan mas: cada uno es un arbol con su total y sus sobres. */
+.listaGrupos {
+  margin-top: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+/* ---------------------------------------------------------------------- desplegable */
+
+.desplegable {
+  margin-top: 0.5rem;
+}
+
+.resumen {
+  cursor: pointer;
+  font-size: 0.8125rem;
+  color: var(--tinta-tenue);
+  transition: color 0.2s ease;
+}
+
+.resumen:hover {
+  color: var(--tinta-media);
+}
+
+/*
+ * El filete vertical marca la pertenencia: los sobres cuelgan de su grupo. Sin el, una lista
+ * de veinte sobres se lee como una lista mas y se pierde que dependen del grupo de arriba.
+ */
+.sublista {
+  margin: 0.75rem 0 0 1rem;
+  padding: 0 0 0 1rem;
+  border-left: 1px solid var(--borde);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* ------------------------------------------------------------------------- filas */
+
+.fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 0.25rem;
+  border-bottom: 1px solid var(--borde);
+}
+
+.fila:last-child {
+  border-bottom: 0;
+}
+
+/*
+ * Item de lista con borde propio: cuentas, grupos, sobres y metas son bloques que se editan
+ * adentro, asi que necesitan recuadro. `.fila` es para lo que no tiene acciones; esto es para
+ * lo que abre un `<details>`.
+ */
+.item {
+  padding: 1rem 1.125rem;
+  border: 1px solid var(--borde);
+  border-radius: 0.875rem;
+  background-color: var(--superficie);
+}
+
+/* Lo archivado se marca con borde punteado: es el mismo objeto, fuera de servicio. */
+.itemArchivado {
+  border-style: dashed;
+  background-color: transparent;
+}
+
+/* El desborde se marca en la propia fila, no solo en el panel de arriba: el panel se lee una
+   vez al entrar y la fila se lee cada vez que se mira el sobre. */
+.itemNegativo {
+  border-color: rgba(255, 84, 104, 0.45);
+  background-color: rgba(255, 84, 104, 0.08);
+}
+
+.avisoNegativo {
+  margin: 0.75rem 0 0;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid rgba(255, 84, 104, 0.25);
+  border-radius: 0.625rem;
+  font-size: 0.8125rem;
+  color: #ffb8c0;
+}
+
+/* Un asignacion vive dentro de un sobre: menos padding y menos contraste. */
+.subItem {
+  padding: 0.75rem 0.875rem;
+  border: 1px solid var(--borde);
+  border-radius: 0.75rem;
+  background-color: var(--superficie);
+}
+
+/* Fila de una sola linea: nombre a la izquierda, importe al lado. */
+.filaCompacta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 0.875rem;
+}
+
+.itemEncabezado {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.itemNombre {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--tinta);
+}
+
+.itemDetalle {
+  margin: 0.125rem 0 0;
+  font-size: 0.75rem;
+  color: var(--tinta-tenue);
+}
+
+.itemValor {
+  margin: 0;
+  flex-shrink: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--tinta);
+}
+
+/* Importes secundarios —el monto de una asignacion dentro de un sobre—: mismo formato
+   tabular, un tamano por debajo para no competir con el disponible del sobre. */
+.valorMedio {
+  font-size: 0.875rem;
+}
+
+.valorChico {
+  font-variant-numeric: tabular-nums;
+  color: var(--tinta-media);
+}
+
+.filaNombre {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  font-size: 0.875rem;
+  color: var(--tinta-media);
+}
+
+/* Importe al final de una `.fila`: el numero que se compara, a la derecha y alineado. */
+.filaValor {
+  flex-shrink: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--tinta);
+}
+
+/* Tinta neutra: importes secundarios que no llevan color semantico. */
+.neutro {
+  color: var(--tinta-tenue);
+}
+
+/* El total de un grupo vive fuera del desplegable: R35 exige que siga visible al plegar. */
+.totalGrupo {
+  margin: 0.5rem 0 0 1rem;
+  font-size: 0.8125rem;
+  color: var(--tinta-tenue);
+}
+
+.totalGrupoValor {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--tinta);
+}
+
+/* --------------------------------------------------------------------- metricas */
+
+/*
+ * Patrimonio, repartido y dinero suelto. Van en grilla porque R9 pide que el usuario vea que
+ * los dos primeros mas el tercero dan el primero: juntos en una fila, la invariante se lee; en
+ * tres tarjetas apiladas, hay que sumarlos a mano.
+ */
+.metricas {
+  margin-top: 1.5rem;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.metrica {
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--borde);
+  border-radius: 0.875rem;
+  background-color: var(--superficie);
+}
+
+/* El dinero suelto en cero es un dato: significa que todo esta asignado. */
+.metricaAtencion {
+  border-color: rgba(255, 176, 32, 0.42);
+  background-color: rgba(255, 176, 32, 0.08);
+}
+
+.metricaEtiqueta {
+  margin: 0;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tinta-tenue);
+}
+
+.metricaValor {
+  margin: 0.375rem 0 0;
+  font-size: 1.375rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--tinta);
+}
+
+/* --------------------------------------------------------------------- alertas */
+
+.alerta {
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+  border: 1px solid rgba(255, 84, 104, 0.45);
+  border-radius: 1rem;
+  background-color: rgba(255, 84, 104, 0.08);
+}
+
+.alertaTitulo {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #ff9aa6;
+}
+
+.alertaTexto {
+  margin: 0.5rem 0 0;
+  font-size: 0.8125rem;
+  color: #ffb8c0;
+}
+
+.alertaLista {
+  margin: 0.875rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.alertaItem {
+  padding: 0.75rem 0.875rem;
+  border: 1px solid rgba(255, 84, 104, 0.25);
+  border-radius: 0.75rem;
+  background-color: var(--velo);
+}
+
+.alertaFila {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.alertaNombre {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--tinta);
+}
+
+.alertaValor {
+  margin: 0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #ff9aa6;
+}
+
+/* El dinero suelto alcanza: el mismo sobre pasa de problema a solucion. */
+.cubre {
+  margin: 0.375rem 0 0;
+  font-size: 0.75rem;
+  color: #7df5e0;
+}
+
+.noCubre {
+  margin: 0.375rem 0 0;
+  font-size: 0.75rem;
+  color: #ffb8c0;
+}
+
+/* ------------------------------------------------------------------- formularios */
+
+/*
+ * Columna vertical de un formulario. Los formularios de alta de la pagina salen todos con el
+ * mismo ritmo: cuatro Rem de separacion entre controles, que es lo que hace que un formulario
+ * de cinco campos y uno de dos se lean como la misma cosa.
+ */
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Formulario en linea: un campo que crece y el boton al lado, alineados por la base. */
+.formularioCercano {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+/*
+ * Formulario en linea con envoltura. Es la forma de los formularios de accion de un sobre:
+ * asignar, tapar, mover, renombrar. Comparten el mismo ritmo y se estrechan en movil en
+ * lugar de desbordar; el `wrap` es lo que permite que el boton baje de linea en vez de salirse
+ * de la pantalla.
+ */
+.formularioEnLinea {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+/*
+ * Campo que crece hasta llenar la fila. El minimo de 10rem evita que en una pantalla angosta
+ * el input quede mas chico que su propia etiqueta.
+ */
+.campoCrece {
+  flex: 1;
+  min-width: 10rem;
+}
+
+/* El campo que absorbe el ancho disponible, para que el boton quede al borde. */
+.crece {
+  flex: 1;
+  min-width: 0;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.etiqueta {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--tinta-media);
+}
+
+.ayuda {
+  font-size: 0.75rem;
+  color: var(--tinta-tenue);
+}
+
+/*
+ * El `select` crudo no lo cubre `tema-oscuro` porque no es una primitiva del tema: es un
+ * control nativo con su propia apariencia. Se declara aca para que los select de los
+ * formularios de cartera hereden el fondo oscuro.
+ */
+.selector {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--borde-vivo);
+  border-radius: 0.75rem;
+  background-color: var(--fondo-medio);
+  color: var(--tinta);
+  font-size: 0.8125rem;
+}
+
+.selector:focus-visible {
+  outline: 2px solid var(--lima);
+  outline-offset: 2px;
+}
+
+/* Aviso en linea que impide una accion, sin louder que un error. */
+.notaAtencion {
+  margin: 0.5rem 0 0;
+  font-size: 0.75rem;
+  color: var(--ambar);
+}
+
+/*
+ * Aviso de atencion que ocupa un bloque: la consequence de una accion que el usuario todavia
+ * no confirmo. Va en ambar y no en riesgo porque no es un error —nada fallo— sino una
+ * consecuencia que hay que leer antes de guardar.
+ */
+.avisoAtencion {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(255, 176, 32, 0.35);
+  border-radius: 0.75rem;
+  background-color: rgba(255, 176, 32, 0.08);
+  font-size: 0.8125rem;
+  color: #ffd27a;
+}
+
+.avisoAtencion strong {
+  font-weight: 600;
+}
+
+/* Texto secundario dentro de una linea de detalle. */
+.tenue {
+  color: var(--tinta-tenue);
+}
+
+/* ------------------------------------------------------------------- avisos */
+
+.error {
+  margin: 0;
+  width: 100%;
+  font-size: 0.8125rem;
+  color: #ff9aa6;
+}
+
+.errorLinea {
+  margin: 0;
+  width: 100%;
+  font-size: 0.75rem;
+  color: #ff9aa6;
+}
+
+.exito {
+  margin: 0;
+  width: 100%;
+  font-size: 0.8125rem;
+  color: #7df5e0;
+}
+
+.exitoLinea {
+  margin: 0;
+  width: 100%;
+  font-size: 0.75rem;
+  color: #7df5e0;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.alineadoDerecha {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+/* Bloque con su propio titulo dentro de un conjunto de acciones. */
+.bloque {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Un grupo de formularios con separacion de bloque: el alta de una cosa y la de otra. */
+.formulario + .formulario,
+.formulario + .filtros {
+  margin-top: 1rem;
+}
+
+/* Formulario de edicion que va dentro de la fila que edita: menos aire y un fondo propio,
+   para que se lea como un panel abierto y no como otra fila de la lista. */
+.formularioAnidado {
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--borde);
+  border-radius: 0.75rem;
+  background-color: var(--superficie);
+}
+
+/* Titulo de un sub-bloque: mismo peso que el rotulo interno pero mas chico, para marcar
+   "Eliminados" como seccion de la lista y no como accion. */
+.seccionTituloPequeño {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--tinta-media);
+}
+
+/* Enlace secundario: "Limpiar" al lado de "Filtrar". */
+.enlaceSuave {
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--tinta-tenue);
+  transition: color 0.2s ease;
+}
+
+.enlaceSuave:hover {
+  color: var(--lima);
+  text-decoration: underline;
+}
+
+.enlaceSuave:focus-visible {
+  outline: 2px solid var(--lima);
+  outline-offset: 2px;
+}
+
+/* Botones de una fila de acciones pegados al margen derecho. */
+.alDerecha {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+/* Dos columnas que colapsan a una: los formularios de alta de movimiento y de edicion. */
+.grillaDos {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* Tres columnas: dia, mes y fecha de inicio de una regla recurrente. */
+.grillaTres {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Barra de filtros. Tres columnas en pantalla ancha porque son seis controles: a dos el
+   formulario queda mas alto que la lista que filtra, y a uno no se exploitó el ancho. */
+.filtros {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--borde);
+  border-radius: 1rem;
+  background-color: var(--superficie);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/*
+ * Rotulo interno, un grado por debajo del antetitulo de seccion: agrupa los formularios dentro
+ * de "Otras acciones" sin fingir que es una seccion de la pagina.
+ */
+.rotuloInterno {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tinta-tenue);
+}
+
+/*
+ * Boton de plegado. Deliberadamente discreto: plegar un grupo es una accion de lectura, no un
+ * cambio en los datos, y no debe competir visualmente con los botones que si escriben.
+ */
+.pliegue {
+  flex-shrink: 0;
+  padding: 0.25rem 0.625rem;
+  border: 1px solid var(--borde-vivo);
+  border-radius: 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--tinta-media);
+  transition:
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.pliegue:hover {
+  border-color: var(--borde-vivo);
+  color: var(--tinta);
+}
+
+.pliegue:focus-visible {
+  outline: 2px solid var(--lima);
+  outline-offset: 2px;
+}
+
+.nota {
+  margin: 0.5rem 0 0;
+  font-size: 0.75rem;
+  color: var(--tinta-tenue);
+}
+
+/* ------------------------------------------------------------------------ vacios */
+
+.vacio {
+  margin-top: 1rem;
+  padding: 1.5rem;
+  border: 1px dashed var(--borde-vivo);
+  border-radius: 0.875rem;
+  font-size: 0.8125rem;
+  color: var(--tinta-tenue);
+}
+
+.vacioItem {
+  padding: 1rem;
+  border: 1px dashed var(--borde-vivo);
+  border-radius: 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--tinta-tenue);
+}
+
+/* ------------------------------------------------------------------------ metas */
+
+/* Etiqueta en linea dentro de la fila de una meta. */
+.etiquetaFuerte {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--tinta-media);
+}
+
+/* Barra de progreso: el carril y el relleno. El ancho del relleno lo pone el `style`. */
+.barraCarril {
+  height: 0.5rem;
+  margin-top: 0.875rem;
+  overflow: hidden;
+  border-radius: 9999px;
+  background-color: var(--tinte-4);
+}
+
+.barra {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.3s ease;
+}
+
+.barraCumplida {
+  background-color: var(--menta);
+}
+
+.barraRetrasada {
+  background-color: var(--ambar);
+}
+
+.barraEnCamino {
+  background-color: var(--lima);
+}
+
+/* Par de datos debajo de la barra: disponible y fecha limite. */
+.datosMeta {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.875rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  font-size: 0.75rem;
+  color: var(--tinta-media);
+}
+
+.tinta {
+  font-weight: 600;
+  color: var(--tinta);
+}
+
+.notaRiesgo {
+  margin-top: 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--riesgo);
+}
+
+.notaCorta {
+  font-size: 0.6875rem;
+  color: var(--tinta-tenue);
+}
+
+/* Acciones al pie de la tarjeta, separadas por un filete. */
+.barraAcciones {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.875rem;
+  padding-top: 0.625rem;
+  border-top: 1px solid var(--borde);
+}
+
+/*
+ * Badges del estado de la meta. El texto del estado ya dice lo mismo —"Objetivo alcanzado",
+ * "Retrasada", "En camino"— asi que el color acompana, no informa.
+ */
+.badgeCumplida {
+  border-color: rgba(0, 240, 200, 0.4);
+  background-color: rgba(0, 240, 200, 0.1);
+  color: #7df5e0;
+}
+
+.badgeRetrasada {
+  border-color: rgba(255, 84, 104, 0.45);
+  background-color: rgba(255, 84, 104, 0.1);
+  color: #ff9aa6;
+}
+
+.badgeEnCamino {
+  border-color: rgba(204, 255, 0, 0.35);
+  background-color: rgba(204, 255, 0, 0.08);
+  color: var(--lima-suave);
+}
+
+/* Estados del historial. El nombre de la clase sale del enum de la base, interpolado. */
+.estadocompletada {
+  border-color: rgba(0, 240, 200, 0.4);
+  background-color: rgba(0, 240, 200, 0.1);
+  color: #7df5e0;
+}
+
+.estadoabandonada {
+  border-color: var(--borde-vivo);
+  background-color: var(--superficie-alta);
+  color: var(--tinta-media);
+}
+
+.estadoactiva {
+  border-color: rgba(204, 255, 0, 0.35);
+  background-color: rgba(204, 255, 0, 0.08);
+  color: var(--lima-suave);
+}
+
+/* Botones de tono: peligro (abandonar) y exito (completar). */
+.botonPeligro {
+  padding: 0.375rem 0.75rem;
+  border: 1px solid rgba(255, 84, 104, 0.4);
+  border-radius: 0.75rem;
+  background-color: rgba(255, 84, 104, 0.1);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #ff9aa6;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.botonPeligro:hover:not(:disabled) {
+  border-color: rgba(255, 84, 104, 0.6);
+  background-color: rgba(255, 84, 104, 0.18);
+}
+
+.botonPeligro:disabled {
+  opacity: 0.5;
+}
+
+.botonExito {
+  padding: 0.375rem 0.75rem;
+  border: 1px solid rgba(0, 240, 200, 0.4);
+  border-radius: 0.75rem;
+  background-color: rgba(0, 240, 200, 0.12);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #7df5e0;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.botonExito:hover:not(:disabled) {
+  border-color: rgba(0, 240, 200, 0.6);
+  background-color: rgba(0, 240, 200, 0.2);
+}
+
+.botonExito:disabled {
+  opacity: 0.5;
+}
+
+.botonPeligro:focus-visible,
+.botonExito:focus-visible {
+  outline: 2px solid var(--lima);
+  outline-offset: 2px;
+}
+
+/* Enlace que abre un formulario: "+ Definir meta de ahorro". */
+.enlaceAccion {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--lima);
+}
+
+.enlaceAccion:hover {
+  color: var(--lima-suave);
+  text-decoration: underline;
+}
+
+.enlaceAccion:focus-visible {
+  outline: 2px solid var(--lima);
+  outline-offset: 2px;
+}
+
+/* Historial de metas: lista compacta dentro de un recuadro tenue. */
+.historial {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  border: 1px solid var(--borde);
+  border-radius: 0.75rem;
+  font-size: 0.75rem;
+  color: var(--tinta-media);
+}
+
+.itemCorto {
+  padding: 0.875rem 1rem;
+}
+
+.itemNombreChico {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--tinta);
+}
+
+/* --------------------------------------------------------------- recurrencias */
+
+/*
+ * Fila de regla recurrente: a partir de `sm` se Parte en dos columnas —descripcion a la
+ * izquierda, importe y acciones a la derecha—. Debajo de `sm` se apila, porque en una pantalla
+ * angosta las dos columnas juntas dejan el importe ilegible.
+ */
+.itemRegla {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--borde);
+  border-radius: 0.875rem;
+  background-color: var(--superficie);
+}
+
+.reglaAcciones {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.reglaMonto {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--tinta);
+}
+
+/* Regla activa: el pill se destaca. Inactiva se queda en el tono neutro por defecto. */
+.pillActiva {
+  border-color: rgba(0, 240, 200, 0.4);
+  background-color: rgba(0, 240, 200, 0.1);
+  font-weight: 500;
+  color: #7df5e0;
+}
+
+/* Enlace de eliminar, en riesgo. El texto ya dice "Eliminar": el color acompana. */
+.enlacePeligro {
+  color: #ff9aa6;
+}
+
+.enlacePeligro:hover {
+  color: #ffb8c0;
+}
+
+.vacioCentrado {
+  padding: 2rem 1.5rem;
+  border: 1px dashed var(--borde-vivo);
+  border-radius: 0.875rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--tinta-tenue);
+}
+
+@media (min-width: 640px) {
+  .itemRegla {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+/* --------------------------------------------------------------- patrimonio */
+
+/*
+ * La cifra grande y su desglose. Centrada y con mucho aire a proposito: es el unico numero
+ * que la vista pone delante de la cara. Todo lo demas es contexto para entenderlo.
+ */
+.patrimonio {
+  overflow: hidden;
+  padding: 1.5rem;
+  border: 1px solid var(--borde);
+  border-radius: 1rem;
+  background-color: var(--superficie);
+  text-align: center;
+}
+
+.patrimonioRotulo {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tinta-tenue);
+}
+
+.patrimonioCifra {
+  margin-top: 0.5rem;
+  font-size: 2.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--tinta);
+}
+
+.patrimonioDesglose {
+  margin-top: 0.875rem;
+}
+
+/* La invariante escrita: patrimonio = en sobres + dinero suelto. */
+.patrimonioDesglose button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.caret {
+  font-size: 0.625rem;
+}
+
+.patrimonioDetalles {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--borde);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  text-align: left;
+}
+
+.patrimonioPieza {
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  background-color: var(--superficie-alta);
+}
+
+.patrimonioPiezaRotulo {
+  display: block;
+  font-size: 0.6875rem;
+  color: var(--tinta-tenue);
+}
+
+.patrimonioPiezaCifra {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--tinta);
+}
+
+/* ------------------------------------------------------------------- tablas */
+
+.encabezadoTabla {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 1.125rem 1.25rem;
+  border-bottom: 1px solid var(--borde);
+}
+
+.tablaContenedor {
+  overflow-x: auto;
+}
+
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.8125rem;
+}
+
+.tablaCabecera {
+  background-color: var(--superficie);
+  border-bottom: 1px solid var(--borde);
+}
+
+.th {
+  padding: 0.75rem 1rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--tinta-tenue);
+}
+
+.thDerecha {
+  text-align: right;
+}
+
+.td {
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--borde);
+  font-variant-numeric: tabular-nums;
+  color: var(--tinta-media);
+}
+
+.td:last-child,
+.td {
+  border-bottom: 1px solid var(--borde);
+}
+
+.tr:last-child .td {
+  border-bottom: 0;
+}
+
+.tdDerecha {
+  text-align: right;
+}
+
+.tdFuerte {
+  font-weight: 600;
+  color: var(--tinta);
+}
+
+.tr {
+  transition: background-color 0.15s ease;
+}
+
+.tr:hover {
+  background-color: var(--superficie);
+}
+
+.notaCortaClara {
+  font-weight: 400;
+}
+
+/* Aviso de que la historia se modifico. Va arriba de la tabla y con filete, no flotando. */
+.avisoHistoria {
+  padding: 0.875rem 1.25rem;
+  border-bottom: 1px solid rgba(255, 176, 32, 0.3);
+  background-color: rgba(255, 176, 32, 0.09);
+  font-size: 0.8125rem;
+  color: #ffd27a;
+}
+
+.avisoHistoriaIcono {
+  font-weight: 700;
+  color: var(--ambar);
+}
+
+@media (max-width: 639px) {
+  .patrimonioCifra {
+    font-size: 2rem;
+  }
+
+  .patrimonioDetalles {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ------------------------------------------------------------------------ chips */
+
+/*
+ * Etiquetas de estado de un movimiento: tipo, "sin asignar", "pata de un traspaso".
+ *
+ * El texto es el que informa; el color solo acentua. Un usuario que no distingue el ambar del
+ * magenta lee igual "sin asignar" y "pata de un traspaso".
+ */
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 0.625rem;
+}
+
+.pill {
+  padding: 0.1rem 0.5rem;
+  border: 1px solid var(--borde);
+  border-radius: 9999px;
+  background-color: var(--superficie);
+  font-size: 0.6875rem;
+  color: var(--tinta-tenue);
+  white-space: nowrap;
+}
+
+/* R2: hay dinero sin destino. */
+.pillAtencion {
+  border-color: rgba(255, 176, 32, 0.4);
+  background-color: rgba(255, 176, 32, 0.1);
+  font-weight: 500;
+  color: var(--ambar);
+}
+
+/* R6: las dos patas se mueven juntas. Magenta para que no se confunda con un problema. */
+.pillTraspaso {
+  border-color: rgba(255, 61, 129, 0.4);
+  background-color: rgba(255, 61, 129, 0.1);
+  color: #ff87b0;
+}
+
+/* Fila eliminada: el tachado ya dice que no cuenta; el resto se apaga para no competir. */
+.tachado {
+  text-decoration: line-through;
+  color: var(--tinta-tenue);
+}
+
+.apagado {
+  color: var(--tinta-tenue);
+}
+
+/* ------------------------------------------------------------------------ chips */
+
+.chip {
+  padding: 0.05rem 0.35rem;
+  border: 1px solid var(--borde);
+  border-radius: 0.3rem;
+  font-size: 0.6875rem;
+  color: var(--tinta-tenue);
+  white-space: nowrap;
+}
+
+.archivado {
+  margin-left: 0.5rem;
+  font-size: 0.6875rem;
+  color: var(--tinta-tenue);
+}
+
+/* ---------------------------------------------------------------------- semanticos */
+
+.positivo {
+  color: var(--menta);
+}
+
+.negativo {
+  color: var(--riesgo);
+}
+
+.atencion {
+  color: var(--ambar);
+}
+
+/* ---------------------------------------------------------------------- adaptacion */
+
+@media (max-width: 767px) {
+  .grillaDos,
+  .grillaTres,
+  .filtros,
+  .datosMeta {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 639px) {
+  .metricas {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

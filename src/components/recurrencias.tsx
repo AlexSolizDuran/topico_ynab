@@ -11,6 +11,7 @@ import {
 import type { ReglaRecurrente } from '../db/tablas/recurrencias'
 import { formatear } from '../dinero'
 import { Aviso, Boton, Campo, type OpcionVista, Selector } from './sesion'
+import detalle from './detalle.module.css'
 
 const INICIAL: ResultadoRecurrencia = { ok: false }
 
@@ -40,8 +41,8 @@ export function FormularioNuevaRegla({
   const [frecuencia, setFrecuencia] = useState<'diaria' | 'semanal' | 'mensual' | 'anual'>('mensual')
 
   return (
-    <form action={formAction} className="space-y-4 rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
-      <h3 className="text-lg font-semibold text-neutral-900">Nueva regla recurrente</h3>
+    <form action={formAction} className={detalle.formulario}>
+      <h3 className={detalle.itemNombre}>Nueva regla recurrente</h3>
 
       {estado.error && <Aviso tono="error">{estado.error}</Aviso>}
       {estado.aviso && <Aviso tono="exito">{estado.aviso}</Aviso>}
@@ -49,7 +50,7 @@ export function FormularioNuevaRegla({
       <input type="hidden" name="cartera_id" value={cartera_id} />
       {token_proteccion && <input type="hidden" name="token_proteccion" value={token_proteccion} />}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className={detalle.grillaDos}>
         <Campo
           nombre="descripcion"
           etiqueta="Descripcion"
@@ -65,38 +66,38 @@ export function FormularioNuevaRegla({
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-700">Tipo</span>
+      <div className={detalle.grillaDos}>
+        <label className="${detalle.campo}">
+          <span className={detalle.etiqueta}>Tipo</span>
           <select
             name="tipo"
             defaultValue="gasto"
-            className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
+            className={detalle.selector}
           >
             <option value="gasto">Gasto</option>
             <option value="ingreso">Ingreso</option>
           </select>
-          {estado.campos?.tipo ? <span className="text-xs text-red-700">{estado.campos.tipo}</span> : null}
+          {estado.campos?.tipo ? <span className={detalle.errorLinea}>{estado.campos.tipo}</span> : null}
         </label>
 
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-700">Frecuencia</span>
+        <label className="${detalle.campo}">
+          <span className={detalle.etiqueta}>Frecuencia</span>
           <select
             name="frecuencia"
             value={frecuencia}
             onChange={(e) => setFrecuencia(e.target.value as 'diaria' | 'semanal' | 'mensual' | 'anual')}
-            className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
+            className={detalle.selector}
           >
             <option value="diaria">Diaria</option>
             <option value="semanal">Semanal</option>
             <option value="mensual">Mensual</option>
             <option value="anual">Anual</option>
           </select>
-          {estado.campos?.frecuencia ? <span className="text-xs text-red-700">{estado.campos.frecuencia}</span> : null}
+          {estado.campos?.frecuencia ? <span className={detalle.errorLinea}>{estado.campos.frecuencia}</span> : null}
         </label>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className={detalle.grillaDos}>
         <Selector
           nombre="cuenta_id"
           etiqueta="Cuenta"
@@ -116,7 +117,7 @@ export function FormularioNuevaRegla({
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className={detalle.grillaTres}>
         <Campo
           nombre="dia"
           etiqueta="Dia"
@@ -125,12 +126,12 @@ export function FormularioNuevaRegla({
           requerido
         />
 
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-700">Mes (requerido para anual)</span>
+        <label className="${detalle.campo}">
+          <span className={detalle.etiqueta}>Mes (requerido para anual)</span>
           <select
             name="mes"
             defaultValue=""
-            className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
+            className={detalle.selector}
           >
             <option value="">Selecciona mes...</option>
             <option value="1">Enero</option>
@@ -146,7 +147,7 @@ export function FormularioNuevaRegla({
             <option value="11">Noviembre</option>
             <option value="12">Diciembre</option>
           </select>
-          {estado.campos?.mes ? <span className="text-xs text-red-700">{estado.campos.mes}</span> : null}
+          {estado.campos?.mes ? <span className={detalle.errorLinea}>{estado.campos.mes}</span> : null}
         </label>
 
         <Campo
@@ -164,7 +165,7 @@ export function FormularioNuevaRegla({
         error={estado.campos?.comercio}
       />
 
-      <div className="flex justify-end pt-2">
+      <div className={detalle.alDerecha}>
         <AccionPendiente>Guardar regla</AccionPendiente>
       </div>
     </form>
@@ -190,34 +191,27 @@ export function FilaRegla({
   const montoFormateado = formatear(regla.monto, moneda)
 
   return (
-    <li className="flex flex-col justify-between gap-3 rounded-lg border border-neutral-200 bg-white p-4 sm:flex-row sm:items-center">
+    <li className={detalle.itemRegla}>
       <div>
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-neutral-900">{regla.descripcion}</span>
-          <span
-            className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-              regla.activa
-                ? 'bg-emerald-50 text-emerald-700'
-                : 'bg-neutral-100 text-neutral-500'
-            }`}
-          >
+        <div className={detalle.filaNombre}>
+          <span className={detalle.itemNombre}>{regla.descripcion}</span>
+          {/* Activa o inactiva lo dice el texto; el color solo distingue de un vistazo. */}
+          <span className={`${detalle.pill} ${regla.activa ? detalle.pillActiva : ''}`}>
             {regla.activa ? 'Activa' : 'Inactiva'}
           </span>
-          <span className="rounded bg-neutral-100 px-2 py-0.5 text-xs text-neutral-600">
-            {regla.frecuencia}
-          </span>
+          <span className={detalle.chip}>{regla.frecuencia}</span>
         </div>
-        <div className="mt-1 text-xs text-neutral-500">
+        <div className={detalle.itemDetalle}>
           <span>Cuenta: {nombreCuenta ?? regla.cuenta_id}</span>
           {nombreSobre ? <span> • Sobre: {nombreSobre}</span> : <span> • Sin sobre</span>}
           <span> • Inicia: {regla.fecha_inicio}</span>
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className={detalle.reglaAcciones}>
         <span
-          className={`font-semibold tabular-nums ${
-            regla.tipo === 'gasto' ? 'text-rose-600' : 'text-emerald-600'
+          className={`${detalle.reglaMonto} ${
+            regla.tipo === 'gasto' ? detalle.negativo : detalle.positivo
           }`}
         >
           {regla.tipo === 'gasto' ? `-${montoFormateado}` : `+${montoFormateado}`}
@@ -230,7 +224,7 @@ export function FilaRegla({
           {token_proteccion && <input type="hidden" name="token_proteccion" value={token_proteccion} />}
           <button
             type="submit"
-            className="text-xs font-medium text-neutral-600 hover:text-neutral-900 underline"
+            className={detalle.enlaceAccion}
           >
             {regla.activa ? 'Desactivar' : 'Activar'}
           </button>
@@ -242,7 +236,7 @@ export function FilaRegla({
           {token_proteccion && <input type="hidden" name="token_proteccion" value={token_proteccion} />}
           <button
             type="submit"
-            className="text-xs font-medium text-rose-600 hover:text-rose-800 underline"
+            className={`${detalle.enlaceAccion} ${detalle.enlacePeligro}`}
           >
             Eliminar
           </button>
@@ -267,14 +261,14 @@ export function ListaReglasRecurrentes({
 }) {
   if (reglas.length === 0) {
     return (
-      <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-6 text-center text-sm text-neutral-500">
+      <div className={detalle.vacioCentrado}>
         No hay reglas recurrentes configuradas en esta cartera.
       </div>
     )
   }
 
   return (
-    <ul className="space-y-2">
+    <ul className={detalle.lista}>
       {reglas.map((regla) => (
         <FilaRegla
           key={regla.id}

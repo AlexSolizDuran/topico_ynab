@@ -12,8 +12,23 @@ import type { Meta } from '../db/schema'
 import type { ProgresoMeta } from '../repos/metas'
 import { formatear } from '../dinero'
 import { Aviso, Boton, Campo } from './sesion'
+import detalle from './detalle.module.css'
 
 const INICIAL: ResultadoMeta = { ok: false }
+
+/**
+ * El sufijo de la clase de la barra, derivando del estado visual.
+ *
+ * Vive en una funcion y no en un ternario dentro del `className` porque el nombre de la clase
+ * se compone: `barra` + `Cumplida` / `Retrasada` / `EnCamino`. Las tres clases estan
+ * declaradas en `detalle.module.css`, asi que un estado nuevo rompe el typecheck y no la
+ * pantalla en silencio.
+ */
+function barraEstado(estado: ProgresoMeta['estado_visual']): 'Cumplida' | 'Retrasada' | 'EnCamino' {
+  if (estado === 'cumplida') return 'Cumplida'
+  if (estado === 'retrasada') return 'Retrasada'
+  return 'EnCamino'
+}
 
 function AccionPendiente({
   children,
@@ -25,22 +40,14 @@ function AccionPendiente({
   const { pending } = useFormStatus()
   if (tono === 'peligro') {
     return (
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 transition hover:bg-rose-100 disabled:opacity-50"
-      >
+      <button type="submit" disabled={pending} className={detalle.botonPeligro}>
         {pending ? 'Procesando...' : children}
       </button>
     )
   }
   if (tono === 'exito') {
     return (
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-50"
-      >
+      <button type="submit" disabled={pending} className={detalle.botonExito}>
         {pending ? 'Completando...' : children}
       </button>
     )
@@ -72,12 +79,17 @@ export function TarjetaMeta({
 
   const anchoBarra = Math.min(100, Math.max(0, progreso.porcentaje))
 
+  /*
+   * El estado va en el texto del badge (`textoEstado`) y no solo en el color: el mismo texto
+   * dice "Objetivo alcanzado", "Retrasada" o "En camino", asi que la vista no depende de
+   * distinguir verde de rojo.
+   */
   const badgeColor =
     progreso.estado_visual === 'cumplida'
-      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+      ? detalle.badgeCumplida
       : progreso.estado_visual === 'retrasada'
-        ? 'border-rose-200 bg-rose-50 text-rose-700'
-        : 'border-blue-200 bg-blue-50 text-blue-700'
+        ? detalle.badgeRetrasada
+        : detalle.badgeEnCamino
 
   const textoEstado =
     progreso.estado_visual === 'cumplida'
@@ -89,44 +101,39 @@ export function TarjetaMeta({
         : 'En camino'
 
   return (
-    <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-800">
+    <div className={`${detalle.item} ${detalle.itemCorto}`}>
       {estadoCompletar.error && <Aviso tono="error">{estadoCompletar.error}</Aviso>}
       {estadoAbandonar.error && <Aviso tono="error">{estadoAbandonar.error}</Aviso>}
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span className="font-semibold text-slate-900">Meta de ahorro:</span>
-          <span className="font-bold text-slate-900">
+      <div className={detalle.itemEncabezado}>
+        <div className={detalle.filaNombre}>
+          <span className={detalle.etiquetaFuerte}>Meta de ahorro:</span>
+          <span className={`${detalle.itemValor} ${detalle.valorMedio}`}>
             {formatear(progreso.monto_objetivo, moneda)}
           </span>
-          <span className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${badgeColor}`}>
-            {textoEstado}
-          </span>
+          <span className={`${detalle.pill} ${badgeColor}`}>{textoEstado}</span>
         </div>
 
-        <div className="text-xs text-slate-500">
+        <div className={detalle.nota}>
           <span>{progreso.porcentaje}% completado</span>
         </div>
       </div>
 
-      {/* Barra de progreso visual */}
-      <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-slate-200">
+      {/*
+        Barra de progreso. El ancho sale de `progreso.porcentaje`, que el repositorio ya
+        acoto a 0..100 y `anchoBarra` vuelve a acotar; el color repite el del badge.
+      */}
+      <div className={detalle.barraCarril}>
         <div
-          className={`h-full transition-all duration-300 ${
-            progreso.estado_visual === 'cumplida'
-              ? 'bg-emerald-500'
-              : progreso.estado_visual === 'retrasada'
-                ? 'bg-amber-500'
-                : 'bg-blue-600'
-          }`}
+          className={`${detalle.barra} ${detalle[`barra${barraEstado(progreso.estado_visual)}`]}`}
           style={{ width: `${anchoBarra}%` }}
         />
       </div>
 
-      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 text-xs text-slate-600">
+      <div className={detalle.datosMeta}>
         <div>
           <span>Disponible: </span>
-          <strong className="text-slate-900">{formatear(progreso.disponible, moneda)}</strong>
+          <strong className={detalle.tinta}>{formatear(progreso.disponible, moneda)}</strong>
           {progreso.restante !== '0.00' && (
             <span> • Faltan: {formatear(progreso.restante, moneda)}</span>
           )}
@@ -135,7 +142,7 @@ export function TarjetaMeta({
         {progreso.fecha_limite && (
           <div>
             <span>Fecha limite: </span>
-            <strong className="text-slate-900">{progreso.fecha_limite}</strong>
+            <strong className={detalle.tinta}>{progreso.fecha_limite}</strong>
             {progreso.ritmo_periodo && (
               <span> • Necesitas {formatear(progreso.ritmo_periodo, moneda)} / periodo</span>
             )}
@@ -144,13 +151,13 @@ export function TarjetaMeta({
       </div>
 
       {progreso.estado_visual === 'retrasada' && progreso.falta_para_ritmo && (
-        <div className="mt-2 text-xs font-medium text-rose-600">
+        <div className={detalle.notaRiesgo}>
           Faltan {formatear(progreso.falta_para_ritmo, moneda)} asignados en este periodo para alcanzar el ritmo necesario.
         </div>
       )}
 
       {/* Botones de acción manual */}
-      <div className="mt-3 flex items-center justify-end gap-3 pt-2 border-t border-slate-200">
+      <div className={detalle.barraAcciones}>
         <form action={formActionAbandonar}>
           <input type="hidden" name="id" value={meta.id} />
           <input type="hidden" name="cartera_id" value={cartera_id} />
@@ -186,12 +193,8 @@ export function FormularioNuevaMeta({
 
   if (!abierto) {
     return (
-      <div className="mt-2">
-        <button
-          type="button"
-          onClick={() => setAbierto(true)}
-          className="text-xs font-medium text-blue-600 hover:text-blue-800 underline"
-        >
+      <div className={detalle.desplegable}>
+        <button type="button" onClick={() => setAbierto(true)} className={detalle.enlaceAccion}>
           + Definir meta de ahorro
         </button>
       </div>
@@ -199,14 +202,10 @@ export function FormularioNuevaMeta({
   }
 
   return (
-    <form action={formAction} className="mt-3 space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-center justify-between">
-        <h4 className="text-sm font-semibold text-slate-900">Nueva meta de ahorro</h4>
-        <button
-          type="button"
-          onClick={() => setAbierto(false)}
-          className="text-xs text-slate-500 hover:text-slate-800"
-        >
+    <form action={formAction} className={`${detalle.formulario} ${detalle.formularioAnidado}`}>
+      <div className={detalle.itemEncabezado}>
+        <h4 className={detalle.itemNombre}>Nueva meta de ahorro</h4>
+        <button type="button" onClick={() => setAbierto(false)} className={detalle.enlaceSuave}>
           Cancelar
         </button>
       </div>
@@ -218,7 +217,7 @@ export function FormularioNuevaMeta({
       <input type="hidden" name="cartera_id" value={cartera_id} />
       {token_proteccion && <input type="hidden" name="token_proteccion" value={token_proteccion} />}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className={detalle.grillaDos}>
         <Campo
           nombre="monto_objetivo"
           etiqueta="Monto objetivo"
@@ -235,7 +234,7 @@ export function FormularioNuevaMeta({
         />
       </div>
 
-      <div className="flex justify-end pt-1">
+      <div className={detalle.alDerecha}>
         <AccionPendiente>Guardar meta</AccionPendiente>
       </div>
     </form>
@@ -254,41 +253,29 @@ export function HistorialMetas({
   if (historial.length === 0) return null
 
   return (
-    <div className="mt-2 text-xs">
-      <button
-        type="button"
-        onClick={() => setExpandido(!expandido)}
-        className="text-slate-500 hover:text-slate-800 underline"
-      >
+    <div className={detalle.bloque}>
+      <button type="button" onClick={() => setExpandido(!expandido)} className={detalle.enlaceSuave}>
         {expandido ? 'Ocultar historial de metas' : `Ver historial (${historial.length} metas anteriores)`}
       </button>
 
       {expandido && (
-        <ul className="mt-2 space-y-1.5 rounded-lg border border-slate-200 bg-slate-50/50 p-2 text-slate-700">
+        <ul className={detalle.historial}>
           {historial.map((meta) => {
             const fechaFin = meta.completada_en ?? meta.abandonada_en
             return (
-              <li key={meta.id} className="flex items-center justify-between text-xs">
+              <li key={meta.id} className={detalle.fila}>
                 <div>
-                  <span className="font-medium text-slate-900">
+                  <span className={detalle.itemNombreChico}>
                     {formatear(meta.monto_objetivo, moneda)}
                   </span>
                   {meta.fecha_limite && <span> (Limite: {meta.fecha_limite})</span>}
                 </div>
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${
-                      meta.estado === 'completada'
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : meta.estado === 'abandonada'
-                          ? 'bg-neutral-200 text-neutral-700'
-                          : 'bg-blue-100 text-blue-800'
-                    }`}
-                  >
+                <div className={detalle.acciones}>
+                  <span className={`${detalle.pill} ${detalle[`estado${meta.estado}`]}`}>
                     {meta.estado}
                   </span>
                   {fechaFin && (
-                    <span className="text-[10px] text-slate-400">
+                    <span className={detalle.notaCorta}>
                       {new Date(fechaFin).toLocaleDateString()}
                     </span>
                   )}

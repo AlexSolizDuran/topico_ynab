@@ -18,10 +18,13 @@
 import Link from 'next/link'
 import { useActionState } from 'react'
 import { useFormStatus } from 'react-dom'
+import { usePathname } from 'next/navigation'
 import { accionCerrarSesion } from '@/sesion/acciones'
+import { BotonTema } from './boton-tema'
 
 const ENLACES = [
   { href: '/panel', texto: 'Panel' },
+  { href: '/resumen', texto: 'Resumen' },
   { href: '/carteras', texto: 'Carteras' },
   { href: '/comparativos', texto: 'Comparativos' },
   { href: '/perfil', texto: 'Perfil' },
@@ -50,6 +53,18 @@ export function Navegacion() {
   // limpieza de cookies ocurren en el servidor, no en el navegador.
   const [estado, accion] = useActionState(accionCerrarSesion, INICIAL)
 
+  /*
+   * Marca de la seccion actual. Sin esto el menu es una lista de enlaces y en `/carteras`
+   * no hay forma de saber que ya estas ahi: con cuatro secciones y una barra fija, perder
+   * la ubicacion obliga a releer la pagina.
+   *
+   * El detalle de una cartera (`/cartera/<id>`) cuelga del panel, asi que marca "Panel" y no
+   * queda ninguno iluminado. La comparacion es por prefijo y no por igualdad exacta porque
+   * `/carteras` y `/cartera/<id>` comparten el prefijo "/cartera": con igualdad, "/carteras" no
+   * encenderia "Carteras" por un caracter de diferencia.
+   */
+  const ruta = usePathname()
+
   return (
     <header className="border-b border-borde bg-superficie">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
@@ -58,20 +73,41 @@ export function Navegacion() {
         </Link>
 
         <nav aria-label="Principal" className="flex flex-wrap items-center gap-x-4 gap-y-1">
-          {ENLACES.map((enlace) => (
-            <Link
-              key={enlace.href}
-              href={enlace.href}
-              className="text-sm text-texto-medio transition-colors hover:text-marca"
-            >
-              {enlace.texto}
-            </Link>
-          ))}
+          {ENLACES.map((enlace) => {
+            /*
+             * `/panel` absorbe las rutas de cartera para que el detalle no deje el menu sin
+             * seccion activa; las otras tres se comparan por prefijo, que para rutas planas
+             * es lo mismo que por igualdad exacta.
+             */
+            const activo =
+              enlace.href === '/panel'
+                ? ruta.startsWith('/panel') || ruta.startsWith('/cartera/')
+                : ruta.startsWith(enlace.href)
+
+            return (
+              <Link
+                key={enlace.href}
+                href={enlace.href}
+                aria-current={activo ? 'page' : undefined}
+                className={
+                  activo
+                    ? 'rounded-md bg-marca/12 px-2 py-1 text-sm font-semibold text-marca'
+                    : 'text-sm text-texto-medio transition-colors hover:text-marca'
+                }
+              >
+                {enlace.texto}
+              </Link>
+            )
+          })}
         </nav>
 
-        <form action={accion} className="ml-auto">
-          <BotonSalir />
-        </form>
+        <div className="ml-auto flex items-center gap-2">
+          <BotonTema />
+
+          <form action={accion}>
+            <BotonSalir />
+          </form>
+        </div>
       </div>
 
       {/*

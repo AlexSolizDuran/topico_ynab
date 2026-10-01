@@ -1,9 +1,11 @@
 ﻿'use client'
 
-import React, { useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { formatear } from '../dinero'
 import type { DatosPanel } from '../repos/panel'
+import estilos from './panel.module.css'
+import tema from './tema-oscuro.module.css'
 
 export interface CarteraOpcion {
   id: number
@@ -31,13 +33,26 @@ export interface PropsPanelResumen {
  * - Conteo y acceso a movimientos sin asignar
  * - Avance de metas activas con destaque de retrasadas
  * - Aislamiento por cartera y sin totales combinados
+ *
+ * El formato vive en `panel.module.css`. Este archivo decide que se muestra y con que regla
+ * de negocio; el color y el espaciado, alla.
  */
 export function PanelResumen({
   datos,
   carterasDisponibles = [],
   avisoRecalculo = false,
 }: PropsPanelResumen) {
-  const { cartera, periodo, patrimonio, dinero_suelto, cuentas, grupos, totales_periodo, pendientes_asignacion, metas_activas } = datos
+  const {
+    cartera,
+    periodo,
+    patrimonio,
+    dinero_suelto,
+    cuentas,
+    grupos,
+    totales_periodo,
+    pendientes_asignacion,
+    metas_activas,
+  } = datos
   const moneda = cartera.moneda
 
   const [desglosePatrimonioAbierto, setDesglosePatrimonioAbierto] = useState(false)
@@ -48,361 +63,460 @@ export function PanelResumen({
     setGruposColapsados((prev) => ({ ...prev, [id]: !prev[id] }))
   }
 
-  return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-12">
-      {/* Aviso de recálculo retroactivo */}
-      {avisoRecalculo && (
-        <div role="status" className="bg-amber-50 border border-amber-200 p-4 rounded-xl text-amber-900 text-sm flex items-center gap-2">
-          <span className="font-bold text-amber-600">ℹ</span>
-          <span>Los valores mostrados han sido recalculados tras registrar o modificar operaciones de periodos anteriores.</span>
-        </div>
-      )}
+  const rutaCartera = `/cartera/${cartera.id}`
 
-      {/* Barra superior con selector de cartera */}
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-xl border border-gray-200">
-        <div>
-          <span className="text-xs text-gray-500 uppercase tracking-wider block">Cartera activa</span>
-          <div className="flex items-center gap-2">
-            <span className="text-xl font-bold text-gray-900">{cartera.nombre}</span>
-            <span className="text-xs font-semibold px-2 py-0.5 bg-blue-50 text-blue-700 rounded-md">
-              {moneda}
+  return (
+    <main className={`${estilos.panel} ${tema.oscuro}`}>
+      <div aria-hidden="true" className={tema.rejilla} />
+      <div aria-hidden="true" className={tema.aurora} />
+      <div aria-hidden="true" className={tema.grano} />
+
+      <div className={estilos.contenido}>
+        {/* Aviso de recálculo retroactivo */}
+        {avisoRecalculo ? (
+          <p role="status" className={estilos.aviso}>
+            <span aria-hidden="true">i</span>
+            <span>
+              Los valores mostrados han sido recalculados tras registrar o modificar
+              operaciones de periodos anteriores.
             </span>
-          </div>
-        </div>
+          </p>
+        ) : null}
 
         {/*
-          Selector de carteras independientes (nunca suma ni arrastra cifras de otra cartera).
+          Cartera activa, periodo y selector, en una sola fila.
 
-          El enlace va a `/panel?cartera=<id>`, NO a `/cartera/<id>`: el requisito de
-          cambiar cartera es "desde el propio panel", asi que cambiar tiene que dejar
-          al usuario en el panel de la nueva cartera. Mandarlo a la pagina de detalle
-          lo saca del panel y contradice el spec.
+          El enlace de cambio va a `/panel?cartera=<id>`, NO a `/cartera/<id>`: el requisito de
+          cambiar cartera es "desde el propio panel", asi que cambiar tiene que dejar al
+          usuario en el panel de la nueva cartera. Mandarlo a la pagina de detalle lo saca
+          del panel y contradice el spec.
 
-          Con una sola cartera no se muestra nada: no hay nada que elegir, y un
-          selector de una opcion es ruido. El enlace a /carteras de abajo es lo que
-          resuelve "quiero ver mis carteras" y "quiero crear otra".
+          Con una sola cartera no se muestra el grupo de cambio: no hay nada que elegir, y un
+          selector de una opcion es ruido. El enlace a /carteras es lo que resuelve "quiero
+          ver mis carteras" y "quiero crear otra".
         */}
-        <div className="flex flex-wrap items-center gap-3">
-          {carterasDisponibles.length > 1 && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500">Cambiar a:</span>
-              <div className="flex flex-wrap gap-1">
-                {carterasDisponibles
-                  .filter((c) => c.id !== cartera.id)
-                  .map((c) => (
-                    <Link
-                      key={c.id}
-                      href={`/panel?cartera=${c.id}`}
-                      className="text-xs px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded font-medium transition-colors"
-                    >
-                      {c.nombre} ({c.moneda})
-                    </Link>
+        <header className={estilos.barraSuperior}>
+          <div className={estilos.barraTitulo}>
+            {/*
+              "Cartera activa" sobre el nombre: con varias carteras, el nombre solo no dice si
+              lo que se mira es esta o la otra. Es la unica etiqueta de la barra y por eso va
+              en versalitas apagadas: informa, no compite con el nombre.
+            */}
+            <span className={estilos.barraEtiqueta}>Cartera activa</span>
+            <h1 className={estilos.cartera}>{cartera.nombre}</h1>
+            <span className={estilos.moneda}>{moneda}</span>
+            {/*
+              El periodo lleva "Mes:" adelante. El valor crudo, "2026-03", no dice si es un mes,
+              un trimestre o un ejercicio, y es el dato que decide que sobres aparecen en el
+              resumen.
+            */}
+            <span className={estilos.periodo}>Mes: {periodo}</span>
+          </div>
+
+          <div className={estilos.barraAcciones}>
+            {carterasDisponibles.length > 1 ? (
+              /*
+               * Selector, no una lista de enlaces. Con varias carteras, los enlaces empujaban
+               * un boton por cada una y la barra crecia con el numero de carteras; el
+               * desplegable ocupa lo mismo con dos que con diez. La cartera que ya se esta
+               * mirando es la opcion seleccionada, para que el control muestre el estado actual.
+               *
+               * Es un `<form method="get">` nativo y no un `router.push`: la pagina del panel
+               * es un componente de servidor, y un GET vuelve a pedirla con la cartera nueva
+               * sin arrastrar estado del cliente —que es justo lo que pide "al cambiar, no se
+               * conserva importe de la cartera anterior" (R10)—. Al no usar `useRouter`, la
+               * vista se puede renderizar en servidor sin contexto de router. El `mes` NO se
+               * conserva a proposito: cambiar de cartera abre su periodo actual.
+               */
+              <form method="get" action="/panel" className={estilos.selectorCartera}>
+                <label htmlFor="panel-cartera" className={estilos.selectorEtiqueta}>
+                  Cambiar de cartera
+                </label>
+                <select
+                  id="panel-cartera"
+                  name="cartera"
+                  className={estilos.selector}
+                  defaultValue={cartera.id}
+                  onChange={(e) => e.currentTarget.form?.requestSubmit()}
+                >
+                  {carterasDisponibles.map((c) => (
+                    /*
+                     * Nombre y moneda entre parentesis, no separados por un punto: es el
+                     * formato que distingue dos carteras con el mismo nombre en monedas
+                     * distintas, y el punto se leia como un separador de etiqueta.
+                     */
+                    <option key={c.id} value={c.id}>
+                      {`${c.nombre} (${c.moneda})`}
+                    </option>
                   ))}
-              </div>
+                </select>
+              </form>
+            ) : null}
+
+            <Link href="/carteras" className={`${estilos.cambio} ${estilos.cambioActual}`}>
+              {carterasDisponibles.length > 1 ? 'Ver carteras' : 'Crear otra cartera'}
+            </Link>
+          </div>
+        </header>
+
+        {/*
+          Las cifras.
+
+          Los importes que el usuario compara entre si van en una sola grilla con divisores,
+          no en cuatro tarjetas apiladas: patrimonio y dinero suelto en la fila de arriba
+          porque son las dos que hay que contrastar, e ingresos, gastos y pendientes abajo,
+          en linea mas chica. El desglose de la igualdad —que estaba escondido detras de un
+          desplegable— queda siempre a la vista en una sola linea.
+        */}
+        <section aria-label="Resumen del periodo" className={estilos.tarjeta}>
+          <div className={estilos.cifras}>
+            <div className={`${estilos.celda} ${estilos.celdaVela}`}>
+              <span className={estilos.celdaEtiqueta}>Patrimonio Neto</span>
+              <span className={estilos.celdaValor}>{formatear(patrimonio.total, moneda)}</span>
             </div>
-          )}
 
-          <Link
-            href="/carteras"
-            className="text-xs px-2.5 py-1 border border-gray-300 hover:bg-gray-100 text-gray-700 rounded font-medium transition-colors"
-          >
-            {carterasDisponibles.length > 1 ? 'Ver carteras' : 'Crear otra cartera'}
-          </Link>
-        </div>
-      </div>
+            <div className={estilos.celda}>
+              <span className={estilos.celdaEtiqueta}>Dinero suelto</span>
+              <span
+                className={`${estilos.celdaValor} ${dinero_suelto.es_negativo ? estilos.riesgo : ''}`}
+              >
+                {formatear(dinero_suelto.monto, moneda)}
+              </span>
+            </div>
+          </div>
 
-      {/* BLOQUE 1: Patrimonio Destacado */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 text-center shadow-xs">
-        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-          Patrimonio Neto
-        </div>
-        <div className="mt-2 text-4xl sm:text-5xl font-extrabold text-gray-900 tracking-tight tabular-nums">
-          {formatear(patrimonio.total, moneda)}
-        </div>
+          {dinero_suelto.sobreasignado ? (
+            <p className={estilos.desglose}>{dinero_suelto.aviso_sobreasignado}</p>
+          ) : null}
 
-        <div className="mt-3">
           <button
             type="button"
             onClick={() => setDesglosePatrimonioAbierto((v) => !v)}
-            className="text-xs text-blue-600 hover:text-blue-800 font-medium inline-flex items-center gap-1 cursor-pointer"
             aria-expanded={desglosePatrimonioAbierto}
+            className={estilos.desglose}
           >
-            <span>
-              = {formatear(patrimonio.en_sobres, moneda)} en sobres + {formatear(patrimonio.dinero_suelto, moneda)} sin asignar
+            = {formatear(patrimonio.en_sobres, moneda)} en sobres +{' '}
+            {formatear(patrimonio.dinero_suelto, moneda)} sin asignar
+            <span aria-hidden="true" className={estilos.caret}>
+              {' '}
+              {desglosePatrimonioAbierto ? '▲' : '▼'}
             </span>
-            <span className="text-[10px]">{desglosePatrimonioAbierto ? '▲' : '▼'}</span>
           </button>
-        </div>
 
-        {desglosePatrimonioAbierto && (
-          <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-left">
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <span className="text-gray-500 block text-xs">Disponible en sobres:</span>
-              <span className="font-semibold text-gray-900 tabular-nums">{formatear(patrimonio.en_sobres, moneda)}</span>
-            </div>
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <span className="text-gray-500 block text-xs">Dinero suelto (sin asignar):</span>
-              <span className="font-semibold text-gray-900 tabular-nums">{formatear(patrimonio.dinero_suelto, moneda)}</span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* BLOQUE 2: Dinero Suelto y Desbordes */}
-      <div className={`rounded-xl border p-5 ${dinero_suelto.es_negativo ? 'bg-rose-50 border-rose-200' : 'bg-white border-gray-200'}`}>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <span className="text-xs font-semibold uppercase tracking-wider block text-gray-600">
-              Dinero Suelto
-            </span>
-            <span className={`text-2xl font-bold tabular-nums ${dinero_suelto.es_negativo ? 'text-rose-700' : 'text-gray-900'}`}>
-              {formatear(dinero_suelto.monto, moneda)}
-            </span>
-            {dinero_suelto.sobreasignado && (
-              <p className="text-xs font-medium text-rose-700 mt-1">
-                {dinero_suelto.aviso_sobreasignado}
+          {desglosePatrimonioAbierto ? (
+            <div className={estilos.desgloseAbierto}>
+              <p className={estilos.desgloseCelda}>
+                <span className={estilos.tipo}>Disponible en sobres</span>
+                <span>{formatear(patrimonio.en_sobres, moneda)}</span>
               </p>
-            )}
-          </div>
+              <p className={estilos.desgloseCelda}>
+                <span className={estilos.tipo}>Dinero suelto, sin asignar</span>
+                <span>{formatear(patrimonio.dinero_suelto, moneda)}</span>
+              </p>
+            </div>
+          ) : null}
 
-          <div className="flex items-center gap-2">
-            <Link
-              href={`/cartera/${cartera.id}?accion=asignar`}
-              className="text-xs font-semibold px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-            >
-              Asignar dinero
-            </Link>
+          <div className={`${estilos.cifras} ${estilos.cifrasMenor}`}>
+            <div className={estilos.celdaMenor}>
+              <span className={estilos.celdaEtiqueta}>Ingresos del mes</span>
+              <span className={`${estilos.celdaValor} ${estilos.ingreso}`}>
+                +{formatear(totales_periodo.ingresado, moneda)}
+              </span>
+            </div>
+
+            <div className={estilos.celdaMenor}>
+              <span className={estilos.celdaEtiqueta}>Gastos del mes</span>
+              <span className={`${estilos.celdaValor} ${estilos.gasto}`}>
+                -{formatear(totales_periodo.gastado, moneda)}
+              </span>
+            </div>
+
+            {/* BLOQUE 6: movimientos sin sobre asignado */}
+            <div className={`${estilos.celdaMenor} ${estilos.filaTotal}`}>
+              <span className={estilos.celdaEtiqueta}>Sin sobre asignado</span>
+              {/*
+                Dice "movimientos pendientes" y no solo "pendientes": en la grilla de arriba la
+                palabra suelta se lee como saldo sin asignar, y lo que se cuenta son
+                operaciones, no dinero.
+              */}
+              <span className={estilos.celdaValor}>
+                {pendientes_asignacion.cantidad === 0
+                  ? 'Todos asignados'
+                  : `${pendientes_asignacion.cantidad} movimientos pendiente${
+                      pendientes_asignacion.cantidad === 1 ? '' : 's'
+                    }`}
+              </span>
+              {pendientes_asignacion.cantidad > 0 ? (
+                <Link
+                  href={`${rutaCartera}?filtro=sin_sobre`}
+                  className={`${estilos.boton} ${estilos.botonAmbar} mt-2`}
+                >
+                  Asignar
+                </Link>
+              ) : null}
+            </div>
           </div>
-        </div>
+        </section>
 
         {/* Acciones para tapar desbordes si existen sobres en negativo */}
-        {datos.desbordes_acciones.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-gray-200/60 space-y-2">
-            <span className="text-xs font-bold text-gray-700 block uppercase">Desbordes detectados</span>
+        {datos.desbordes_acciones.length > 0 ? (
+          <section aria-label="Desbordes detectados" className={estilos.tarjeta}>
+            <div className={estilos.seccion}>
+              <h2 className={estilos.titulo}>Desbordes detectados</h2>
+              <Link
+                href={`${rutaCartera}?accion=asignar`}
+                className={`${estilos.boton} ${estilos.botonLima}`}
+              >
+                Asignar dinero
+              </Link>
+            </div>
+
             {datos.desbordes_acciones.map((desborde) => (
-              <div key={desborde.sobre_id} className="flex flex-wrap items-center justify-between p-2.5 bg-white/80 rounded-lg text-sm border border-gray-200 gap-2">
-                <div>
-                  <span className="font-semibold text-gray-900">{desborde.nombre_sobre}: </span>
-                  <span className="text-rose-600 font-bold tabular-nums">{formatear(desborde.disponible_negativo, moneda)}</span>
-                </div>
+              <div key={desborde.sobre_id} className={estilos.desborde}>
+                <p className={estilos.desbordeTexto}>
+                  <span className={estilos.desbordeNombre}>{desborde.nombre_sobre}</span>
+                  <span className={estilos.desbordeValor}>
+                    -{formatear(desborde.disponible_negativo, moneda)}
+                  </span>
+                </p>
+
                 {desborde.puede_tapar ? (
                   <Link
-                    href={`/cartera/${cartera.id}?tapar_sobre=${desborde.sobre_id}&origen=suelto`}
-                    className="text-xs font-semibold px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded transition-colors"
+                    href={`${rutaCartera}?tapar_sobre=${desborde.sobre_id}&origen=suelto`}
+                    className={`${estilos.boton} ${estilos.botonAmbar}`}
                   >
                     Tapar desborde con dinero suelto
                   </Link>
                 ) : (
-                  <span className="text-xs text-gray-500 italic">
-                    El dinero suelto actual no cubre este desborde
+                  <span className={estilos.desbordeNota}>
+                    El dinero suelto no cubre este desborde
                   </span>
                 )}
               </div>
             ))}
-          </div>
-        )}
-      </div>
+          </section>
+        ) : null}
 
-      {/* BLOQUE 3 Y 5 EN GRID: Cuentas y Totales del periodo */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* BLOQUE 3: Cuentas */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs">
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="font-bold text-gray-900 text-base">Cuentas</h3>
-            <Link href={`/cartera/${cartera.id}`} className="text-xs text-blue-600 hover:underline">
-              Ver todas
-            </Link>
-          </div>
-
-          <div className="divide-y divide-gray-100 text-sm">
-            {cuentas.activas.map((c) => {
-              const esDeuda = c.tipo === 'credito' || c.saldo.startsWith('-')
-              return (
-                <div key={c.id} className="py-2.5 flex justify-between items-center">
-                  <div>
-                    <span className="font-medium text-gray-800">{c.nombre}</span>
-                    <span className="text-xs text-gray-400 block capitalize">{c.tipo}</span>
-                  </div>
-                  <span className={`font-semibold tabular-nums ${esDeuda ? 'text-rose-600' : 'text-gray-900'}`}>
-                    {formatear(c.saldo, moneda)}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-
-          <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between items-center text-sm font-bold text-gray-900">
-            <span>Total cuentas activas</span>
-            <span className="tabular-nums">{formatear(cuentas.total_activas, moneda)}</span>
-          </div>
-
-          {cuentas.archivadas.length > 0 && (
-            <div className="mt-4 pt-3 border-t border-gray-100">
-              <button
-                type="button"
-                onClick={() => setArchivadasAbiertas((v) => !v)}
-                className="text-xs text-gray-500 hover:text-gray-700 flex justify-between w-full"
-              >
-                <span>Cuentas archivadas ({cuentas.archivadas.length})</span>
-                <span>{archivadasAbiertas ? '▲' : '▼'}</span>
-              </button>
-              {archivadasAbiertas && (
-                <div className="mt-2 divide-y divide-gray-100 text-xs text-gray-500">
-                  {cuentas.archivadas.map((c) => (
-                    <div key={c.id} className="py-1.5 flex justify-between">
-                      <span>{c.nombre} (archivada)</span>
-                      <span className="tabular-nums">{formatear(c.saldo, moneda)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* BLOQUE 5: Totales del Periodo (Ingresos y Gastos sin contar traspasos) */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs flex flex-col justify-between">
-          <div>
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="font-bold text-gray-900 text-base">Mes: {periodo}</h3>
-              <Link href={`/cartera/${cartera.id}`} className="text-xs text-blue-600 hover:underline">
-                Movimientos
+        {/*
+          Cuentas y sobres van en dos columnas en pantalla ancha. Antes eran la misma
+          disposicion, pero cada bloque con su propia tarjeta y su propio encabezado pesado;
+          aca comparten el mismo paso de separacion y el titulo va en versalitas de 11px.
+        */}
+        <div className={estilos.columnas}>
+          {/* BLOQUE 3: Cuentas */}
+          <section aria-label="Cuentas" className={estilos.tarjeta}>
+            <div className={estilos.seccion}>
+              <h2 className={estilos.titulo}>Cuentas</h2>
+              <Link href={rutaCartera} className={estilos.enlaceSuave}>
+                Ver todas
               </Link>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 mt-4 text-center">
-              <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-100">
-                <span className="text-xs text-emerald-800 font-medium block">Ingresos del mes</span>
-                <span className="text-lg font-bold text-emerald-700 tabular-nums">
-                  +{formatear(totales_periodo.ingresado, moneda)}
-                </span>
-              </div>
-              <div className="p-3 bg-rose-50 rounded-lg border border-rose-100">
-                <span className="text-xs text-rose-800 font-medium block">Gastos del mes</span>
-                <span className="text-lg font-bold text-rose-700 tabular-nums">
-                  -{formatear(totales_periodo.gastado, moneda)}
-                </span>
-              </div>
-            </div>
-          </div>
+            <div className={estilos.filas}>
+              {cuentas.activas.map((c) => {
+                const esDeuda = c.tipo === 'credito' || c.saldo.startsWith('-')
 
-          {/* BLOQUE 6: Movimientos sin asignar */}
-          <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between">
-            <div>
-              <span className="text-xs text-gray-500 block">Movimientos sin sobre asignado</span>
-              <span className="text-sm font-bold text-gray-800">
-                {pendientes_asignacion.cantidad === 0
-                  ? 'Todos asignados'
-                  : `${pendientes_asignacion.cantidad} ${pendientes_asignacion.cantidad === 1 ? 'movimiento' : 'movimientos'} pendiente`}
-              </span>
-            </div>
-            {pendientes_asignacion.cantidad > 0 && (
-              <Link
-                href={`/cartera/${cartera.id}?filtro=sin_sobre`}
-                className="text-xs font-semibold px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded transition-colors"
-              >
-                Asignar
-              </Link>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* BLOQUE 4: Sobres agrupados por grupo y metas activas */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="font-bold text-gray-900 text-base">Sobres presupuestarios</h3>
-          <Link href={`/cartera/${cartera.id}`} className="text-xs text-blue-600 hover:underline">
-            Ver todos los sobres
-          </Link>
-        </div>
-
-        {/* Metas activas destacadas */}
-        {metas_activas.length > 0 && (
-          <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-200/60">
-            <span className="text-xs font-bold text-gray-600 uppercase tracking-wider block mb-2">
-              Progreso de metas activas
-            </span>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {metas_activas.map((meta) => (
-                <div
-                  key={meta.id}
-                  className={`p-3 rounded-lg border bg-white ${meta.retrasada ? 'border-amber-300 ring-1 ring-amber-300' : 'border-gray-200'}`}
-                >
-                  <div className="flex justify-between items-start">
-                    <span className="font-semibold text-gray-900 text-sm">{meta.nombre_sobre}</span>
-                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${meta.retrasada ? 'bg-amber-100 text-amber-800' : meta.estado_visual === 'cumplida' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'}`}>
-                      {meta.retrasada ? 'Retrasada' : meta.estado_visual === 'cumplida' ? 'Cumplida' : 'En camino'}
+                return (
+                  <div key={c.id} className={estilos.fila}>
+                    <span className={estilos.filaNombre}>
+                      <span>{c.nombre}</span>
+                      <span className={estilos.tipo}>{c.tipo}</span>
+                    </span>
+                    <span
+                      className={`${estilos.filaValor} ${esDeuda ? estilos.riesgo : ''}`}
+                    >
+                      {formatear(c.saldo, moneda)}
                     </span>
                   </div>
-                  <div className="mt-2 text-xs text-gray-500 flex justify-between">
-                    <span>{formatear(meta.disponible, moneda)} de {formatear(meta.monto_objetivo, moneda)}</span>
-                    <span className="font-bold text-gray-700">{meta.porcentaje}%</span>
-                  </div>
-                  <div className="mt-1 w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                    <div
-                      className={`h-1.5 rounded-full ${meta.retrasada ? 'bg-amber-500' : 'bg-emerald-500'}`}
-                      style={{ width: `${Math.min(meta.porcentaje, 100)}%` }}
-                    />
-                  </div>
-                  {meta.retrasada && meta.falta_para_ritmo && (
-                    <p className="mt-2 text-[11px] text-amber-800 font-medium">
-                      Faltan {formatear(meta.falta_para_ritmo, moneda)} para alcanzar el ritmo necesario este mes.
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+                )
+              })}
 
-        {/* Lista de grupos */}
-        <div className="space-y-4">
-          {grupos.map((grupo) => {
-            const colapsado = gruposColapsados[grupo.id] ?? false
-            return (
-              <div key={grupo.id} className="border border-gray-100 rounded-xl overflow-hidden">
+              <div className={`${estilos.fila} ${estilos.filaTotal}`}>
+                <span className={estilos.filaNombre}>
+                  <span>Total cuentas activas</span>
+                </span>
+                <span className={estilos.filaValor}>
+                  {formatear(cuentas.total_activas, moneda)}
+                </span>
+              </div>
+            </div>
+
+            {cuentas.archivadas.length > 0 ? (
+              <>
                 <button
                   type="button"
-                  onClick={() => toggleGrupo(grupo.id)}
-                  className="w-full flex justify-between items-center p-3 bg-gray-50 hover:bg-gray-100/80 transition-colors text-left"
+                  onClick={() => setArchivadasAbiertas((v) => !v)}
+                  aria-expanded={archivadasAbiertas}
+                  className={estilos.desglose}
                 >
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-400">{colapsado ? '▶' : '▼'}</span>
-                    <span className="font-bold text-gray-800 text-sm">{grupo.nombre}</span>
-                    <span className="text-xs text-gray-400">({grupo.sobres.length})</span>
-                  </div>
-                  <span className="font-bold text-gray-900 text-sm tabular-nums">
-                    {formatear(grupo.total_disponible, moneda)}
+                  Cuentas archivadas ({cuentas.archivadas.length})
+                  <span aria-hidden="true" className={estilos.caret}>
+                    {' '}
+                    {archivadasAbiertas ? '▲' : '▼'}
                   </span>
                 </button>
 
-                {!colapsado && (
-                  <div className="divide-y divide-gray-100 p-2">
-                    {grupo.sobres.map((sobre) => (
-                      <div key={sobre.id} className="py-2 px-3 flex justify-between items-center text-sm hover:bg-gray-50/50 rounded">
-                        <div>
-                          <span className={`font-medium ${sobre.es_negativo ? 'text-rose-700' : 'text-gray-800'}`}>
-                            {sobre.nombre}
-                          </span>
-                          {sobre.es_negativo && (
-                            <span className="ml-2 text-xs font-semibold px-2 py-0.5 bg-rose-100 text-rose-800 rounded">
-                              En rojo (-{sobre.desborde && formatear(sobre.desborde, moneda)})
-                            </span>
-                          )}
-                        </div>
-                        <span className={`font-bold tabular-nums ${sobre.es_negativo ? 'text-rose-600' : 'text-emerald-700'}`}>
-                          {formatear(sobre.disponible, moneda)}
+                {archivadasAbiertas ? (
+                  <div className={estilos.filas}>
+                    {cuentas.archivadas.map((c) => (
+                      <div key={c.id} className={estilos.fila}>
+                        <span className={estilos.filaNombre}>
+                          <span>{c.nombre}</span>
+                          <span className={estilos.tipo}>archivada</span>
+                        </span>
+                        <span className={estilos.filaValor}>
+                          {formatear(c.saldo, moneda)}
                         </span>
                       </div>
                     ))}
                   </div>
-                )}
-              </div>
-            )
-          })}
+                ) : null}
+              </>
+            ) : null}
+          </section>
+
+          {/* BLOQUE 4: Sobres agrupados por grupo */}
+          <section aria-label="Sobres presupuestarios" className={estilos.tarjeta}>
+            <div className={estilos.seccion}>
+              <h2 className={estilos.titulo}>Sobres</h2>
+              <Link href={rutaCartera} className={estilos.enlaceSuave}>
+                Ver todos
+              </Link>
+            </div>
+
+            {/* Metas activas. La etiqueta de estado y la barra van en la misma linea. */}
+            {metas_activas.length > 0 ? (
+              <>
+                {/*
+                  Subtitulo y no otra tarjeta: las metas comparten seccion con los sobres y
+                  abrirlas aparte las separaria de la cartera a la que apuntan. El filete de
+                  arriba las distingue sin sumar un borde mas.
+                */}
+                <h3 className={estilos.subtitulo}>Progreso de metas activas</h3>
+                <div className={estilos.filas}>
+                {metas_activas.map((meta) => (
+                  <div key={meta.id} className={estilos.meta}>
+                    <div className={estilos.metaCuerpo}>
+                      <div className={estilos.sobreLinea}>
+                        <span className={estilos.grupoNombre}>{meta.nombre_sobre}</span>
+                        <span
+                          className={`${estilos.etiquetaMeta} ${
+                            meta.retrasada
+                              ? estilos.etiquetaRetrasada
+                              : meta.estado_visual === 'cumplida'
+                                ? estilos.etiquetaCumplida
+                                : estilos.etiquetaCamino
+                          }`}
+                        >
+                          {meta.retrasada
+                            ? 'Retrasada'
+                            : meta.estado_visual === 'cumplida'
+                              ? 'Cumplida'
+                              : 'En camino'}
+                        </span>
+                      </div>
+
+                      <div className={estilos.sobreLinea}>
+                        <span className={estilos.tipo}>
+                          {formatear(meta.disponible, moneda)} de{' '}
+                          {formatear(meta.monto_objetivo, moneda)}
+                        </span>
+                        <span className={estilos.conteo}>{meta.porcentaje}%</span>
+                      </div>
+
+                      <div className={estilos.pista}>
+                        <div
+                          className={estilos.pistaRelleno}
+                          style={{ width: `${Math.min(meta.porcentaje, 100)}%` }}
+                        />
+                      </div>
+
+                      {meta.retrasada && meta.falta_para_ritmo ? (
+                        <p className={`${estilos.tipo} mt-1`}>
+                          Faltan {formatear(meta.falta_para_ritmo, moneda)} para alcanzar el
+                          ritmo necesario este mes.
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+                </div>
+              </>
+            ) : null}
+
+            {/* Lista de grupos, plegable */}
+            <div>
+              {grupos.map((grupo) => {
+                const colapsado = gruposColapsados[grupo.id] ?? false
+
+                return (
+                  <div key={grupo.id} className={estilos.grupo}>
+                    <button
+                      type="button"
+                      onClick={() => toggleGrupo(grupo.id)}
+                      aria-expanded={!colapsado}
+                      className={estilos.grupoCabecera}
+                    >
+                      <span className={estilos.grupoIzquierda}>
+                        <span
+                          aria-hidden="true"
+                          className={`${estilos.caret} ${colapsado ? '' : estilos.caretAbierto}`}
+                        >
+                          ▶
+                        </span>
+                        <span className={estilos.grupoNombre}>{grupo.nombre}</span>
+                        <span className={estilos.conteo}>({grupo.sobres.length})</span>
+                      </span>
+
+                      <span className={estilos.filaValor}>
+                        {formatear(grupo.total_disponible, moneda)}
+                      </span>
+                    </button>
+
+                    {!colapsado ? (
+                      <div>
+                        {grupo.sobres.map((sobre) => (
+                          <div key={sobre.id} className={estilos.sobre}>
+                            <div className={estilos.sobreCuerpo}>
+                              <div className={estilos.sobreLinea}>
+                                <span
+                                  className={
+                                    sobre.es_negativo ? estilos.riesgo : estilos.filaNombre
+                                  }
+                                >
+                                  {sobre.nombre}
+                                </span>
+
+                                {sobre.es_negativo ? (
+                                  <span className={estilos.etiquetaRiesgo}>
+                                    En rojo
+                                  </span>
+                                ) : null}
+                              </div>
+
+                              {sobre.es_negativo && sobre.desborde ? (
+                                <p className={estilos.tipo}>
+                                  Desborde {formatear(sobre.desborde, moneda)}
+                                </p>
+                              ) : null}
+                            </div>
+
+                            <span
+                              className={`${estilos.filaValor} ${sobre.es_negativo ? estilos.riesgo : estilos.ingreso}`}
+                            >
+                              {formatear(sobre.disponible, moneda)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                )
+              })}
+            </div>
+          </section>
         </div>
       </div>
-    </div>
+    </main>
   )
 }

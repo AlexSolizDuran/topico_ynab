@@ -30,6 +30,7 @@ import {
 } from '../traspasos/acciones'
 import { absDinero, paraCampo } from '../dinero'
 import { Aviso, AvisoRetroactivo, Boton, Campo, type OpcionVista, Selector } from './sesion'
+import detalle from './detalle.module.css'
 
 /**
  * El estado de partida de cada formulario.
@@ -74,7 +75,7 @@ function Resultado({ estado, periodo }: { estado: ResultadoDeTraspaso; periodo: 
     return <Aviso tono="error">{estado.error}</Aviso>
   }
   return (
-    <div className="flex flex-col gap-2">
+    <div className={detalle.bloque}>
       {estado.aviso ? <Aviso tono="exito">{estado.aviso}</Aviso> : null}
       <AvisoRetroactivo periodoAfectado={estado.periodo_afectado} periodoActual={periodo} />
     </div>
@@ -92,7 +93,7 @@ function Campos({ estado, periodo }: { estado: ResultadoDeTraspaso; periodo: str
     <>
       <Resultado estado={estado} periodo={periodo} />
       {estado.campos && !estado.error ? (
-        <p className="text-xs text-slate-500">
+        <p className={detalle.nota}>
           Revisá los campos marcados e intentá de nuevo.
         </p>
       ) : null}
@@ -113,8 +114,8 @@ function Campos({ estado, periodo }: { estado: ResultadoDeTraspaso; periodo: str
  */
 function AvisoDeEdicionEnEspejo({ adversario }: { adversario?: string }) {
   return (
-    <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-      <strong className="font-semibold">Esto mueve las dos patas.</strong>{' '}
+    <p className={detalle.avisoAtencion}>
+      <strong>Esto mueve las dos patas.</strong>{' '}
       {adversario === undefined ? (
         <>
           Corregir este traspaso reescribe su grupo entero. Quedará con una sola pata, sin
@@ -157,7 +158,7 @@ function CamposDelTraspaso({
   return (
     <>
       <Campos estado={estado} periodo={periodo} />
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className={detalle.grillaDos}>
         <Selector
           opciones={cuentas}
           nombre="origen_cuenta_id"
@@ -234,7 +235,7 @@ export function FormularioNuevoTraspaso({
   )
 
   return (
-    <form action={enviar} className="flex flex-col gap-4">
+    <form action={enviar} className={detalle.formulario}>
       <CamposDelTraspaso
         estado={estado}
         periodo={periodo}
@@ -242,11 +243,11 @@ export function FormularioNuevoTraspaso({
         origen=""
         destino=""
       />
-      <p className="text-sm text-slate-500">
+      <p className={detalle.nota}>
         Un traspaso con destino mueve dinero de una cuenta a otra y no toca ningun sobre. Si lo
         deixas sin contraparte, sale una sola pata y la app te avisa.
       </p>
-      <div className="flex justify-end">
+      <div className={detalle.alDerecha}>
         <AccionPendiente>Registrar traspaso</AccionPendiente>
       </div>
     </form>
@@ -281,7 +282,7 @@ export function FilaEditarTraspaso({
   )
 
   return (
-    <form action={enviar} className="mt-3 flex flex-col gap-3 rounded-xl bg-slate-50 p-4">
+    <form action={enviar} className={`${detalle.formulario} ${detalle.formularioAnidado}`}>
       <CamposDelTraspaso
         estado={estado}
         periodo={periodo}
@@ -301,7 +302,7 @@ export function FilaEditarTraspaso({
         }}
       />
       <AvisoDeEdicionEnEspejo adversario={movimiento.contraparte_cuenta_nombre ?? undefined} />
-      <div className="flex justify-end">
+      <div className={detalle.alDerecha}>
         <AccionPendiente>Guardar el traspaso</AccionPendiente>
       </div>
     </form>
@@ -322,9 +323,9 @@ export function RecorridoDeTraspaso({ movimiento }: { movimiento: MovimientoEnVi
   if (movimiento.tipo !== 'traspaso') return null
 
   return movimiento.contraparte_cuenta_nombre === null ? (
-    <span className="text-slate-500">De {movimiento.cuenta_nombre}, sin contraparte</span>
+    <span className={detalle.tenue}>De {movimiento.cuenta_nombre}, sin contraparte</span>
   ) : (
-    <span className="text-slate-500">
+    <span className={detalle.tenue}>
       De {movimiento.cuenta_nombre} a {movimiento.contraparte_cuenta_nombre}
     </span>
   )

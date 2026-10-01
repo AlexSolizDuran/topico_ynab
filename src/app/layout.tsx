@@ -27,7 +27,21 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" className={`${fuenteCifra.variable} ${fuenteTexto.variable}`}>
-      <body className="min-h-screen bg-lienzo text-texto antialiased">{children}</body>
+      <body className="min-h-screen bg-lienzo text-texto antialiased">
+        {/*
+          El tema elegido se aplica antes del primer pintado para que no haya un destello del
+          tema por defecto: el CSS lo lee de `data-tema` en `<html>`, y sin esto el navegador
+          pintaria oscuro y recien despues de hidratar saltaria a claro. Va como script inline
+          y en linea, sin `next/script`, porque necesita correr de forma sincronica.
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{var t=localStorage.getItem('tema');if(t==='claro'||t==='oscuro'){document.documentElement.dataset.tema=t}}catch(e){}",
+          }}
+        />
+        {children}
+      </body>
     </html>
   )
 }

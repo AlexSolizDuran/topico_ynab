@@ -1,8 +1,9 @@
-'use client'
+﻿'use client'
 
 import React, { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { formatear } from '../dinero'
+import estilos from './comparativos.module.css'
 import {
   calcularVariacionComparativo,
   type DatosComparativo,
@@ -158,16 +159,15 @@ export function VistaComparativos({
   const periodosComparados = periodos.filter((p) => p !== periodoRef)
 
   return (
-    <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6 text-slate-800" data-testid="vista-comparativos">
-      {/* Aviso de recálculo retroactivo */}
+    <div className={estilos.vista} data-testid="vista-comparativos">
+      {/*
+        El aviso de recalculo usa `role="status"` y no una clase propia a proposito: el tema
+        oscuro lo pinta por ese atributo, igual que los avisos de error. Asi el mismo estado se
+        ve igual aca que en cualquier formulario.
+      */}
       {avisoRecalculo && (
-        <div
-          role="status"
-          aria-live="polite"
-          data-testid="aviso-recalculo"
-          className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r shadow-sm text-sm text-amber-900"
-        >
-          <div className="flex items-center space-x-2">
+        <div role="status" aria-live="polite" data-testid="aviso-recalculo">
+          <div className="flex items-center gap-2">
             <span className="font-semibold">Aviso de recálculo:</span>
             <span>
               Los resultados de la comparación cambiaron debido a correcciones en movimientos de periodos anteriores.
@@ -177,18 +177,18 @@ export function VistaComparativos({
       )}
 
       {/* Encabezado y selector de cartera */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b pb-4">
+      <div className={estilos.encabezado}>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Comparativo de periodos</h1>
-          <p className="text-sm text-slate-500">
+          <h1 className={estilos.titulo}>Comparativo de periodos</h1>
+          <p className={estilos.bajada}>
             Evolución del gasto y uso de sobres en{' '}
-            <span className="font-medium text-slate-700">{cartera.nombre}</span> ({moneda})
+            <span className={estilos.carteraNombre}>{cartera.nombre}</span> ({moneda})
           </p>
         </div>
 
         {carterasDisponibles.length > 1 && (
-          <div className="flex items-center space-x-2 text-sm">
-            <label htmlFor="selector-cartera-comp" className="text-slate-600 font-medium">
+          <div className={estilos.selector}>
+            <label htmlFor="selector-cartera-comp" className={estilos.etiqueta}>
               Cartera:
             </label>
             <select
@@ -196,7 +196,6 @@ export function VistaComparativos({
               data-testid="selector-cartera"
               value={cartera.id}
               onChange={(e) => onCambiarCartera?.(Number(e.target.value))}
-              className="border border-slate-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {carterasDisponibles.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -209,9 +208,9 @@ export function VistaComparativos({
       </div>
 
       {/* Barra de controles: Periodo de referencia y Umbral */}
-      <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-        <div>
-          <label htmlFor="select-periodo-ref" className="block font-semibold text-slate-700 mb-1">
+      <div className={estilos.controles}>
+        <div className={estilos.control}>
+          <label htmlFor="select-periodo-ref" className={estilos.controlEtiqueta}>
             Periodo de referencia
           </label>
           <select
@@ -223,7 +222,6 @@ export function VistaComparativos({
               setPeriodoRef(nuevo)
               onCambiarReferencia?.(nuevo)
             }}
-            className="w-full border border-slate-300 rounded px-3 py-2 bg-white text-slate-800 focus:ring-2 focus:ring-blue-500"
           >
             {periodos.map((p) => (
               <option key={p} value={p}>
@@ -233,8 +231,8 @@ export function VistaComparativos({
           </select>
         </div>
 
-        <div>
-          <label htmlFor="input-umbral-pct" className="block font-semibold text-slate-700 mb-1">
+        <div className={estilos.control}>
+          <label htmlFor="input-umbral-pct" className={estilos.controlEtiqueta}>
             Umbral porcentaje (%)
           </label>
           <input
@@ -249,12 +247,11 @@ export function VistaComparativos({
               setUmbralPct(val)
               onCambiarUmbral?.({ ...umbralActual, porcentaje: val })
             }}
-            className="w-full border border-slate-300 rounded px-3 py-2 bg-white text-slate-800 focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
-        <div>
-          <label htmlFor="input-umbral-monto" className="block font-semibold text-slate-700 mb-1">
+        <div className={estilos.control}>
+          <label htmlFor="input-umbral-monto" className={estilos.controlEtiqueta}>
             Umbral importe absoluto ({moneda})
           </label>
           <input
@@ -267,59 +264,57 @@ export function VistaComparativos({
               setUmbralMonto(val)
               onCambiarUmbral?.({ ...umbralActual, importe_absoluto: val })
             }}
-            className="w-full border border-slate-300 rounded px-3 py-2 bg-white text-slate-800 focus:ring-2 focus:ring-blue-500"
           />
         </div>
       </div>
 
       {/* Sección: Variaciones relevantes destacadas */}
-      <section className="bg-white border border-slate-200 rounded-lg p-5 shadow-sm space-y-3">
-        <div className="flex justify-between items-center">
-          <h2 className="text-lg font-semibold text-slate-900">Variaciones relevantes</h2>
-          <span className="text-xs text-slate-500">
+      <section className={estilos.tarjeta}>
+        <div className={estilos.tarjetaCabecera}>
+          <h2 className={estilos.seccionTitulo}>Variaciones relevantes</h2>
+          <span className={estilos.seccionNota}>
             Criterio: &gt;= {umbralPct}% o &gt;= {formatear(umbralMonto, moneda)} vs {periodoRef}
           </span>
         </div>
 
         {datosCalculados.hayVariacionesDestacadas ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3" data-testid="contenedor-variaciones-destacadas">
+          <div className={estilos.destacadas} data-testid="contenedor-variaciones-destacadas">
             {datosCalculados.elementosDestacados.map((item, idx) => {
               const esAumento = item.direccion === 'aumento'
               return (
                 <div
                   key={`${item.tipo}-${item.id}-${item.periodo}-${idx}`}
                   data-testid="tarjeta-variacion-destacada"
-                  className={`p-3.5 rounded-lg border flex flex-col justify-between ${
-                    esAumento
-                      ? 'bg-rose-50/50 border-rose-200 text-rose-950'
-                      : 'bg-emerald-50/50 border-emerald-200 text-emerald-950'
+                  className={`${estilos.destacada} ${
+                    esAumento ? estilos.destacadaAumento : estilos.destacadaDisminucion
                   }`}
                 >
-                  <div className="flex justify-between items-start">
+                  <div className={estilos.destacadaTop}>
                     <div>
-                      <span className="text-xs uppercase tracking-wider font-semibold opacity-75">
+                      <span className={estilos.destacadaTipo}>
                         {item.tipo === 'grupo' ? 'Grupo' : 'Sobre'}
                       </span>
-                      <p className="font-bold text-base text-slate-900">{item.nombre}</p>
+                      <p className={estilos.destacadaNombre}>{item.nombre}</p>
                     </div>
+                    {/* El chip repite en texto lo que el borde dice en color. */}
                     <span
-                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        esAumento ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'
+                      className={`${estilos.chip} ${
+                        esAumento ? estilos.chipAumento : estilos.chipDisminucion
                       }`}
                     >
                       {item.direccion === 'aumento' ? 'Aumento' : 'Disminución'}
                     </span>
                   </div>
 
-                  <div className="mt-3 pt-2 border-t border-slate-200/60 flex justify-between items-baseline text-sm">
-                    <span className="text-slate-600 font-medium">En {item.periodo}:</span>
-                    <div className="text-right">
-                      <span className="font-bold">
+                  <div className={estilos.destacadaPie}>
+                    <span className={estilos.destacadaPeriodo}>En {item.periodo}:</span>
+                    <div className={estilos.derecha}>
+                      <span className={estilos.destacadaValor}>
                         {esAumento ? '+' : '-'}
                         {formatear(item.diferencia_absoluta, moneda)}
                       </span>
                       {item.porcentaje && (
-                        <span className="text-xs ml-1.5 opacity-80">({item.porcentaje})</span>
+                        <span className={estilos.destacadaPorcentaje}>({item.porcentaje})</span>
                       )}
                     </div>
                   </div>
@@ -328,45 +323,44 @@ export function VistaComparativos({
             })}
           </div>
         ) : (
-          <div
-            data-testid="sin-variaciones-relevantes"
-            className="p-6 text-center bg-slate-50 border border-dashed border-slate-200 rounded-lg text-slate-500"
-          >
-            <p className="font-medium text-slate-700">Sin variaciones relevantes</p>
-            <p className="text-xs mt-1">Ningún sobre ni grupo supera el umbral configurado respecto a {periodoRef}.</p>
+          <div data-testid="sin-variaciones-relevantes" className={estilos.vacio}>
+            <p className={estilos.vacioTitulo}>Sin variaciones relevantes</p>
+            <p className={estilos.vacioTexto}>
+              Ningún sobre ni grupo supera el umbral configurado respecto a {periodoRef}.
+            </p>
           </div>
         )}
       </section>
 
       {/* Matriz comparativa detallada por grupos y sobres */}
-      <section className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-200 flex justify-between items-center">
-          <h2 className="text-lg font-semibold text-slate-900">Desglose de gastos por categoría</h2>
-          <span className="text-xs text-slate-500">Excluye traspasos entre cuentas</span>
+      <section className={estilos.tablaCaja}>
+        <div className={estilos.tablaCabecera}>
+          <h2 className={estilos.seccionTitulo}>Desglose de gastos por categoría</h2>
+          <span className={estilos.seccionNota}>Excluye traspasos entre cuentas</span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-sm">
+        <div className={estilos.tablaScroll}>
+          <table className={estilos.tabla}>
             <thead>
-              <tr className="bg-slate-100/75 border-b border-slate-200 text-slate-600">
-                <th className="p-3 font-semibold">Categoría / Sobre</th>
-                <th className="p-3 text-right font-semibold">
-                  {periodoRef} <span className="text-xs text-blue-600 font-normal">(Ref)</span>
+              <tr>
+                <th>Categoría / Sobre</th>
+                <th className={estilos.derecha}>
+                  {periodoRef} <span className={estilos.ref}>(Ref)</span>
                 </th>
                 {periodosComparados.map((p) => (
-                  <th key={p} className="p-3 text-right font-semibold" colSpan={2}>
+                  <th key={p} className={estilos.derecha} colSpan={2}>
                     {p}
                   </th>
                 ))}
               </tr>
               {periodosComparados.length > 0 && (
-                <tr className="bg-slate-50 border-b border-slate-200 text-xs text-slate-500">
-                  <th className="p-1.5"></th>
-                  <th className="p-1.5 text-right font-normal">Gasto</th>
+                <tr>
+                  <th />
+                  <th className={estilos.derecha}>Gasto</th>
                   {periodosComparados.map((p) => (
                     <React.Fragment key={`sub-${p}`}>
-                      <th className="p-1.5 text-right font-normal">Gasto</th>
-                      <th className="p-1.5 text-right font-normal">Diferencia</th>
+                      <th className={estilos.derecha}>Gasto</th>
+                      <th className={estilos.derecha}>Diferencia</th>
                     </React.Fragment>
                   ))}
                 </tr>
@@ -380,19 +374,17 @@ export function VistaComparativos({
                     {/* Fila del Grupo */}
                     <tr
                       data-testid={`fila-grupo-${grupo.id}`}
-                      className="bg-slate-50/80 font-semibold border-b border-slate-200 hover:bg-slate-100/80 cursor-pointer"
+                      className={`${estilos.fila} ${estilos.filaGrupo}`}
                       onClick={() => toggleGrupo(grupo.id)}
                     >
-                      <td className="p-3 flex items-center space-x-2">
-                        <span className="text-xs text-slate-400">{colapsado ? '▶' : '▼'}</span>
-                        <span className="text-slate-900">{grupo.nombre}</span>
+                      <td className={estilos.celdaNombre}>
+                        <span className={estilos.caret}>{colapsado ? '▶' : '▼'}</span>
+                        <span className={estilos.celdaGrupo}>{grupo.nombre}</span>
                         {grupo.tiene_variacion_destacada && (
-                          <span className="text-xs px-1.5 py-0.2 bg-amber-100 text-amber-800 rounded font-normal">
-                            Variación
-                          </span>
+                          <span className={estilos.badgeVariacion}>Variación</span>
                         )}
                       </td>
-                      <td className="p-3 text-right font-mono">
+                      <td className={estilos.derecha}>
                         {formatear(grupo.totales_por_periodo[periodoRef] ?? '0.00', moneda)}
                       </td>
                       {periodosComparados.map((p) => {
@@ -400,18 +392,18 @@ export function VistaComparativos({
                         const esAumento = v?.direccion === 'aumento'
                         return (
                           <React.Fragment key={`g-${grupo.id}-${p}`}>
-                            <td className="p-3 text-right font-mono text-slate-700">
+                            <td className={estilos.importe}>
                               {formatear(grupo.totales_por_periodo[p] ?? '0.00', moneda)}
                             </td>
-                            <td className="p-3 text-right font-mono text-xs">
+                            <td className={estilos.derecha}>
                               {v ? (
                                 <span
                                   className={
                                     v.destacada
                                       ? esAumento
-                                        ? 'text-rose-600 font-bold'
-                                        : 'text-emerald-600 font-bold'
-                                      : 'text-slate-500'
+                                        ? estilos.aumento
+                                        : estilos.disminucion
+                                      : estilos.neutro
                                   }
                                 >
                                   {esAumento ? '+' : ''}
@@ -433,17 +425,15 @@ export function VistaComparativos({
                         <tr
                           key={`sobre-${sobre.id}`}
                           data-testid={`fila-sobre-${sobre.id}`}
-                          className="border-b border-slate-100 hover:bg-slate-50/50 text-slate-700"
+                          className={estilos.fila}
                         >
-                          <td className="p-3 pl-8 text-sm flex items-center space-x-2">
+                          <td className={`${estilos.celdaNombre} ${estilos.celdaSobre}`}>
                             <span>{sobre.nombre}</span>
                             {sobre.archivado && (
-                              <span className="text-[10px] text-slate-400 bg-slate-100 px-1 rounded">
-                                Archivado
-                              </span>
+                              <span className={estilos.badgeArchivado}>Archivado</span>
                             )}
                           </td>
-                          <td className="p-3 text-right font-mono text-sm">
+                          <td className={estilos.derecha}>
                             {formatear(sobre.importes_por_periodo[periodoRef] ?? '0.00', moneda)}
                           </td>
                           {periodosComparados.map((p) => {
@@ -451,18 +441,18 @@ export function VistaComparativos({
                             const esAumento = v?.direccion === 'aumento'
                             return (
                               <React.Fragment key={`s-${sobre.id}-${p}`}>
-                                <td className="p-3 text-right font-mono text-sm text-slate-600">
+                                <td className={estilos.importe}>
                                   {formatear(sobre.importes_por_periodo[p] ?? '0.00', moneda)}
                                 </td>
-                                <td className="p-3 text-right font-mono text-xs">
+                                <td className={estilos.derecha}>
                                   {v ? (
                                     <span
                                       className={
                                         v.destacada
                                           ? esAumento
-                                            ? 'text-rose-600 font-bold'
-                                            : 'text-emerald-600 font-bold'
-                                          : 'text-slate-500'
+                                            ? estilos.aumento
+                                            : estilos.disminucion
+                                          : estilos.neutro
                                       }
                                     >
                                       {esAumento ? '+' : ''}
@@ -484,9 +474,9 @@ export function VistaComparativos({
             </tbody>
             <tfoot>
               {/* Total General */}
-              <tr className="bg-slate-100 font-bold border-t-2 border-slate-300 text-slate-900">
-                <td className="p-3">Total General</td>
-                <td className="p-3 text-right font-mono">
+              <tr className={estilos.total}>
+                <td>Total General</td>
+                <td className={estilos.derecha}>
                   {formatear(datos.total_general_por_periodo[periodoRef] ?? '0.00', moneda)}
                 </td>
                 {periodosComparados.map((p) => {
@@ -494,18 +484,18 @@ export function VistaComparativos({
                   const esAumento = v?.direccion === 'aumento'
                   return (
                     <React.Fragment key={`tot-gen-${p}`}>
-                      <td className="p-3 text-right font-mono text-slate-900">
+                      <td className={estilos.importe}>
                         {formatear(datos.total_general_por_periodo[p] ?? '0.00', moneda)}
                       </td>
-                      <td className="p-3 text-right font-mono text-xs">
+                      <td className={estilos.derecha}>
                         {v ? (
                           <span
                             className={
                               v.destacada
                                 ? esAumento
-                                  ? 'text-rose-600'
-                                  : 'text-emerald-600'
-                                : 'text-slate-600'
+                                  ? estilos.aumento
+                                  : estilos.disminucion
+                                : estilos.neutro
                             }
                           >
                             {esAumento ? '+' : ''}

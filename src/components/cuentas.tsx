@@ -23,12 +23,37 @@ import {
 import { TIPOS_DE_CUENTA } from '../cuentas/validacion'
 import { formatear } from '../dinero'
 import { Aviso, Boton, Campo } from './sesion'
+import detalle from './detalle.module.css'
 
 const INICIAL = { ok: false, error: undefined, campos: undefined, aviso: undefined } as const
 
 function AccionPendiente({ children }: { children: React.ReactNode }) {
   const { pending } = useFormStatus()
   return <Boton pendiente={pending}>{children}</Boton>
+}
+
+/**
+ * Campo de tipo de cuenta.
+ *
+ * Va suelto dos veces en este archivo —alta y edicion— y el `select` crudo aparecia en ambos
+ * con las mismas clases. Se extrae para que el tema oscuro lo pinte una sola vez.
+ */
+function SelectorTipo({ valor = 'corriente', nombre = 'tipo' }: { valor?: string; nombre?: string }) {
+  return (
+    <label className={detalle.campo}>
+      <span className={detalle.etiqueta}>Tipo</span>
+      <select name={nombre} defaultValue={valor} className={detalle.selector}>
+        {TIPOS_DE_CUENTA.map((tipo) => (
+          <option key={tipo} value={tipo}>
+            {tipo}
+          </option>
+        ))}
+      </select>
+      <span className={detalle.ayuda}>
+        Una cuenta de credito representa deuda, asi que su saldo puede ser negativo.
+      </span>
+    </label>
+  )
 }
 
 export function FormularioNuevaCuenta({ cartera_id }: { cartera_id: number }) {
@@ -38,29 +63,13 @@ export function FormularioNuevaCuenta({ cartera_id }: { cartera_id: number }) {
   )
 
   return (
-    <form action={accion} className="flex flex-col gap-4">
+    <form action={accion} className={detalle.formulario}>
       {estado.error ? <Aviso tono="error">{estado.error}</Aviso> : null}
       {estado.aviso ? <Aviso tono="exito">{estado.aviso}</Aviso> : null}
 
       <Campo nombre="nombre" etiqueta="Nombre" error={estado.campos?.nombre} />
 
-      <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium text-slate-700">Tipo</span>
-        <select
-          name="tipo"
-          defaultValue="corriente"
-          className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
-        >
-          {TIPOS_DE_CUENTA.map((tipo) => (
-            <option key={tipo} value={tipo}>
-              {tipo}
-            </option>
-          ))}
-        </select>
-        <span className="text-xs text-slate-500">
-          Una cuenta de credito representa deuda, asi que su saldo puede ser negativo.
-        </span>
-      </label>
+      <SelectorTipo />
 
       <Campo
         nombre="saldo_inicial"
@@ -124,17 +133,15 @@ export function FilaCuenta({
   const enRojo = saldo.trim().startsWith('-')
 
   return (
-    <li className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
+    <li className={detalle.item}>
+      <div className={detalle.itemEncabezado}>
         <div>
-          <p className="font-medium text-slate-900">{nombre}</p>
-          <p className="text-xs text-slate-500">
+          <p className={detalle.itemNombre}>{nombre}</p>
+          <p className={detalle.itemDetalle}>
             {tipo} · saldo inicial {formatear(saldo_inicial, moneda)}
           </p>
         </div>
-        <p
-          className={`text-lg font-semibold tabular-nums ${enRojo ? 'text-red-600' : 'text-slate-900'}`}
-        >
+        <p className={`${detalle.itemValor} ${enRojo ? detalle.negativo : ''}`}>
           {formatear(saldo, moneda)}
         </p>
       </div>
@@ -146,18 +153,18 @@ export function FilaCuenta({
       {estado.aviso ? <Aviso tono="exito">{estado.aviso}</Aviso> : null}
       {estadoSaldo.aviso ? <Aviso tono="exito">{estadoSaldo.aviso}</Aviso> : null}
 
-      <details className="mt-3">
-        <summary className="cursor-pointer text-xs text-slate-500">Editar cuenta</summary>
+      <details className={detalle.desplegable}>
+        <summary className={detalle.resumen}>Editar cuenta</summary>
 
-        <form action={renombrar} className="mt-3 flex items-end gap-2">
-          <div className="flex-1">
+        <form action={renombrar} className={detalle.formularioCercano}>
+          <div className={detalle.crece}>
             <Campo nombre="nombre" etiqueta="Nuevo nombre" error={estado.campos?.nombre} />
           </div>
           <AccionPendiente>Renombrar</AccionPendiente>
         </form>
 
-        <form action={corregir} className="mt-3 flex items-end gap-2">
-          <div className="flex-1">
+        <form action={corregir} className={detalle.formularioCercano}>
+          <div className={detalle.crece}>
             <Campo
               nombre="saldo_inicial"
               etiqueta="Corregir saldo inicial"
@@ -168,32 +175,19 @@ export function FilaCuenta({
           <AccionPendiente>Corregir</AccionPendiente>
         </form>
 
-        <form action={cambiarTipo} className="mt-3 flex items-end gap-2">
-          <div className="flex-1">
-            <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium text-slate-700">Tipo</span>
-              <select
-                name="tipo"
-                defaultValue={tipo}
-                className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
-              >
-                {TIPOS_DE_CUENTA.map((opcion) => (
-                  <option key={opcion} value={opcion}>
-                    {opcion}
-                  </option>
-                ))}
-              </select>
-            </label>
+        <form action={cambiarTipo} className={detalle.formularioCercano}>
+          <div className={detalle.crece}>
+            <SelectorTipo valor={tipo} />
           </div>
           <AccionPendiente>Cambiar tipo</AccionPendiente>
         </form>
         {tieneMovimientos ? (
-          <p className="mt-1 text-xs text-amber-700">
+          <p className={detalle.notaAtencion}>
             Esta cuenta tiene movimientos, asi que el tipo ya no se puede cambiar.
           </p>
         ) : null}
 
-        <form action={archivar} className="mt-3">
+        <form action={archivar} className={detalle.formularioCercano}>
           <AccionPendiente>Archivar cuenta</AccionPendiente>
         </form>
       </details>
@@ -221,11 +215,11 @@ export function FilaCuentaArchivada({
   )
 
   return (
-    <li className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5">
-      <div className="flex items-center justify-between gap-3">
+    <li className={`${detalle.item} ${detalle.itemArchivado}`}>
+      <div className={detalle.itemEncabezado}>
         <div>
-          <p className="font-medium text-slate-700">{nombre}</p>
-          <p className="text-xs text-slate-500">
+          <p className={detalle.itemNombre}>{nombre}</p>
+          <p className={detalle.itemDetalle}>
             Archivada · saldo {formatear(saldo, moneda)}
           </p>
         </div>

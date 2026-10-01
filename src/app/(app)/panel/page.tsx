@@ -48,12 +48,9 @@ export default async function PaginaPanel({
     moneda: c.moneda,
   }))
 
-  return (
-    <main className="mx-auto max-w-5xl px-4 py-8">
-      <PanelResumen
-        datos={datos}
-        carterasDisponibles={opcionesCarteras}
-      />
-    </main>
-  )
+  /*
+   * No envuelve en un `main` con `max-w-5xl px-4 py-8`: el panel trae su propio contenedor
+   * con el ancho y el padding, y dos capas de layout se pelean por el espacio horizontal.
+   */
+  return <PanelResumen datos={datos} carterasDisponibles={opcionesCarteras} />
 }
