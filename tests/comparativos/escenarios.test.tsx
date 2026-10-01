@@ -68,10 +68,10 @@ describe('120: matriz de trazabilidad - 13 escenarios de comparativos', () => {
     it('Scenario: Comparacion por grupo', async () => {
       const otroSobre = await crearSobre(base.db, cartera_id, grupo_id, { nombre: 'Farmacia' })
       await crearMovimiento(base.db, { cuenta_id, sobre_id, monto: '-1200.00', fecha: '2026-01-10', tipo: 'gasto' })
-      await crearMovimiento(base.db, { cuenta_id, sobre_id, otroSobre, monto: '-800.00', fecha: '2026-01-12', tipo: 'gasto' })
+      await crearMovimiento(base.db, { cuenta_id, sobre_id: otroSobre, monto: '-800.00', fecha: '2026-01-12', tipo: 'gasto' })
 
       await crearMovimiento(base.db, { cuenta_id, sobre_id, monto: '-1500.00', fecha: '2026-02-10', tipo: 'gasto' })
-      await crearMovimiento(base.db, { cuenta_id, sobre_id, otroSobre, monto: '-1000.00', fecha: '2026-02-12', tipo: 'gasto' })
+      await crearMovimiento(base.db, { cuenta_id, sobre_id: otroSobre, monto: '-1000.00', fecha: '2026-02-12', tipo: 'gasto' })
 
       const datos = await consultarComparativo(
         base.db,
