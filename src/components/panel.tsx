@@ -70,27 +70,45 @@ export function PanelResumen({
           </div>
         </div>
 
-        {/* Selector de carteras independientes (nunca suma ni arrastra cifras de otra cartera) */}
-        {carterasDisponibles.length > 1 && (
-          <div className="flex items-center gap-2">
-            <label htmlFor="selector-cartera-panel" className="text-xs text-gray-500">
-              Cambiar a:
-            </label>
-            <div className="flex gap-1">
-              {carterasDisponibles
-                .filter((c) => c.id !== cartera.id)
-                .map((c) => (
-                  <Link
-                    key={c.id}
-                    href={`/cartera/${c.id}`}
-                    className="text-xs px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded font-medium transition-colors"
-                  >
-                    {c.nombre} ({c.moneda})
-                  </Link>
-                ))}
+        {/*
+          Selector de carteras independientes (nunca suma ni arrastra cifras de otra cartera).
+
+          El enlace va a `/panel?cartera=<id>`, NO a `/cartera/<id>`: el requisito de
+          cambiar cartera es "desde el propio panel", asi que cambiar tiene que dejar
+          al usuario en el panel de la nueva cartera. Mandarlo a la pagina de detalle
+          lo saca del panel y contradice el spec.
+
+          Con una sola cartera no se muestra nada: no hay nada que elegir, y un
+          selector de una opcion es ruido. El enlace a /carteras de abajo es lo que
+          resuelve "quiero ver mis carteras" y "quiero crear otra".
+        */}
+        <div className="flex flex-wrap items-center gap-3">
+          {carterasDisponibles.length > 1 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500">Cambiar a:</span>
+              <div className="flex flex-wrap gap-1">
+                {carterasDisponibles
+                  .filter((c) => c.id !== cartera.id)
+                  .map((c) => (
+                    <Link
+                      key={c.id}
+                      href={`/panel?cartera=${c.id}`}
+                      className="text-xs px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded font-medium transition-colors"
+                    >
+                      {c.nombre} ({c.moneda})
+                    </Link>
+                  ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+
+          <Link
+            href="/carteras"
+            className="text-xs px-2.5 py-1 border border-gray-300 hover:bg-gray-100 text-gray-700 rounded font-medium transition-colors"
+          >
+            {carterasDisponibles.length > 1 ? 'Ver carteras' : 'Crear otra cartera'}
+          </Link>
+        </div>
       </div>
 
       {/* BLOQUE 1: Patrimonio Destacado */}
@@ -191,7 +209,7 @@ export function PanelResumen({
         <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs">
           <div className="flex justify-between items-center mb-3">
             <h3 className="font-bold text-gray-900 text-base">Cuentas</h3>
-            <Link href={`/cartera/${cartera.id}/cuentas`} className="text-xs text-blue-600 hover:underline">
+            <Link href={`/cartera/${cartera.id}`} className="text-xs text-blue-600 hover:underline">
               Ver todas
             </Link>
           </div>
@@ -247,7 +265,7 @@ export function PanelResumen({
           <div>
             <div className="flex justify-between items-center mb-3">
               <h3 className="font-bold text-gray-900 text-base">Mes: {periodo}</h3>
-              <Link href={`/cartera/${cartera.id}/movimientos`} className="text-xs text-blue-600 hover:underline">
+              <Link href={`/cartera/${cartera.id}`} className="text-xs text-blue-600 hover:underline">
                 Movimientos
               </Link>
             </div>
@@ -280,7 +298,7 @@ export function PanelResumen({
             </div>
             {pendientes_asignacion.cantidad > 0 && (
               <Link
-                href={`/cartera/${cartera.id}/movimientos?filtro=sin_sobre`}
+                href={`/cartera/${cartera.id}?filtro=sin_sobre`}
                 className="text-xs font-semibold px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded transition-colors"
               >
                 Asignar
@@ -294,7 +312,7 @@ export function PanelResumen({
       <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs">
         <div className="flex justify-between items-center mb-4">
           <h3 className="font-bold text-gray-900 text-base">Sobres presupuestarios</h3>
-          <Link href={`/cartera/${cartera.id}/sobres`} className="text-xs text-blue-600 hover:underline">
+          <Link href={`/cartera/${cartera.id}`} className="text-xs text-blue-600 hover:underline">
             Ver todos los sobres
           </Link>
         </div>
