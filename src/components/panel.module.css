@@ -38,11 +38,17 @@
 
 /* ------------------------------------------------------------------------- retícula */
 
+/*
+ * El contenido mide 72rem, antes 68. Subió porque el grid de dos columnas se fue: los listados
+ * de abajo —cuentas, sobres, movimientos— ahora ocupan el ancho entero y una fila con nombre,
+ * importe y menu de acciones necesita ese aire para no partirse en dos lineas. La linea de
+ * texto no crece con el ancho, asi que el cambio afecta solo a la densidad de las tablas.
+ */
 .contenido {
   position: relative;
   margin: 0 auto;
   width: 100%;
-  max-width: 68rem;
+  max-width: 72rem;
   display: flex;
   flex-direction: column;
   gap: 0.875rem;
@@ -424,13 +430,6 @@
   font-weight: 700;
 }
 
-/* Columnas: cuentas al lado de sobres, se comparan sin saltar de bloque. */
-.columnas {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.875rem;
-}
-
 /* ---------------------------------------------------------------------- sobres */
 
 /*
@@ -719,12 +718,6 @@
 }
 
 /* -------------------------------------------------------------------- adaptacion */
-
-@media (min-width: 900px) {
-  .columnas {
-    grid-template-columns: 1fr 1.35fr;
-  }
-}
 
 @media (max-width: 767px) {
   .panel {

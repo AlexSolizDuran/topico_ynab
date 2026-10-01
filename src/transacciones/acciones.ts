@@ -153,7 +153,8 @@ export async function accionRegistrarMovimiento(
       tipo: validado.tipo,
     })
 
-    revalidatePath(`/cartera/${cartera_id}`)
+    revalidatePath('/panel')
+    revalidatePath('/comparativos')
     return {
       ok: true,
       aviso: `El movimiento quedo registrado en ${creado.periodo}.`,
@@ -199,7 +200,8 @@ export async function accionEditarMovimiento(
       comercio: validado.comercio === '' ? null : validado.comercio,
     })
 
-    revalidatePath(`/cartera/${cartera_id}`)
+    revalidatePath('/panel')
+    revalidatePath('/comparativos')
     return {
       ok: true,
       aviso: 'El movimiento quedo corregido.',
@@ -229,13 +231,17 @@ export async function accionEliminarMovimiento(
     const sesion = await exigirSesion()
     const resultado = await eliminarMovimiento(db, sesion.usuario_id, movimiento_id)
 
-    revalidatePath(`/cartera/${cartera_id}`)
+    revalidatePath('/panel')
+    // El borrado tambien cambia las cifras de `comparativos`: el gasto de un periodo deja
+    // de contar. Sin esto, un usuario que compara despues de borrar ve un total viejo.
+    revalidatePath('/comparativos')
     return {
       ok: true,
       aviso:
         resultado.eliminados > 1
           ? `Se eliminaron ${resultado.eliminados} movimientos: el traspaso completo.`
           : 'El movimiento quedo eliminado. Puedes restaurarlo.',
+      periodo_afectado: resultado.periodo,
     }
   } catch (error) {
     return aResultado(error)
@@ -255,7 +261,7 @@ export async function accionRestaurarMovimiento(
     const sesion = await exigirSesion()
     const resultado = await restaurarMovimiento(db, sesion.usuario_id, movimiento_id)
 
-    revalidatePath(`/cartera/${cartera_id}`)
+    revalidatePath('/panel')
     return {
       ok: true,
       aviso:
@@ -293,7 +299,7 @@ export async function accionAsignarSobre(
       await asignarSobre(db, sesion.usuario_id, movimiento_id, exigirEntero(sobre_id, 'el sobre'))
     }
 
-    revalidatePath(`/cartera/${cartera_id}`)
+    revalidatePath('/panel')
     return { ok: true, aviso: sobre_id === '' ? 'Se le quito el sobre.' : 'Se le asigno el sobre.' }
   } catch (error) {
     return aResultado(error)

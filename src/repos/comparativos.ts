@@ -44,8 +44,6 @@ export interface SobreComparativo {
   id: number
   grupo_id: number
   nombre: string
-  icono?: string | null
-  color?: string | null
   archivado: boolean
   orden: number
   importes_por_periodo: Record<string, Dinero>
@@ -56,8 +54,6 @@ export interface SobreComparativo {
 export interface GrupoComparativo {
   id: number
   nombre: string
-  icono?: string | null
-  color?: string | null
   orden: number
   totales_por_periodo: Record<string, Dinero>
   variaciones: Record<string, Variacion>
@@ -255,33 +251,97 @@ export async function consultarComparativo(
     .orderBy(sobres.orden, sobres.nombre)
 
   const clausulaPeriodos = sql.join(listaPeriodos.map((p) => sql`${p}`), sql`, `)
-  const gastosSobres = await filas<{
-    sobre_id: number
-    periodo: string
-    gasto: Dinero
-  }>(
-    db,
-    sql`
-      select
-        m.sobre_id,
-        to_char(m.fecha, 'YYYY-MM') as periodo,
-        coalesce(sum(case when m.tipo = 'gasto' or (m.tipo is null and m.monto < 0) then abs(m.monto) else 0 end), 0) as gasto
-      from movimientos m
-      join cuentas c on c.id = m.cuenta_id
-      where c.cartera_id = ${cartera_id}
-        and c.eliminado_en is null
-        and m.eliminado_en is null
-        and m.transferencia_id is null
-        and m.tipo <> 'traspaso'
-        and m.sobre_id is not null
-        and to_char(m.fecha, 'YYYY-MM') in (${clausulaPeriodos})
-      group by m.sobre_id, to_char(m.fecha, 'YYYY-MM')
-    `,
-  )
+
+  /*
+   * El gasto de la comparacion, en tres niveles: por sobre, por grupo y total.
+   *
+   * Los tres se resuelven en SQL y salen juntos en un `Promise.all`, no sumando filas en
+   * JavaScript. La suma de una columna que viene de la base es de la base. Además, en JS el
+   * total de un grupo quedaba atado a que el `map` de sobres llegara completo: la misma
+   * clase de copia que `repos/fragmentos.ts` existe para evitar.
+   *
+   * El filtro de traspasos es solo `m.tipo <> 'traspaso'`, y alcanza: de los tres caminos de
+   * insercion, solo `repos/traspasos.ts` escribe `transferencia_id`, y lo hace con
+   * `tipo = 'traspaso'` —`repos/movimientos.ts` y `repos/recurrencias.ts` no lo pasan— asi
+   * que un `transferencia_id is null` aca no excluia ninguna fila adicional.
+   *
+   * La rama `m.tipo is null` que tenia el `case` tambien se fue: `tipo` es un `pgEnum`
+   * `notNull` (`db/tablas/cuentas.ts`), asi que nunca era cierta.
+   *
+   * El `abs` es de Postgres y el gasto sale positivo; el signo lo lleva `movimientos.monto`.
+   * El `case` sobre `gasto` es lo que separa el gasto del ingreso: sin el, un ingreso
+   * entraria como gasto y la comparacionaria en contra.
+   */
+  const whereGasto = sql`
+    c.cartera_id = ${cartera_id}
+    and c.eliminado_en is null
+    and m.eliminado_en is null
+    and m.tipo <> 'traspaso'
+    and m.sobre_id is not null
+    and to_char(m.fecha, 'YYYY-MM') in (${clausulaPeriodos})
+  `
+  const importeGasto = sql`
+    coalesce(sum(case when m.tipo = 'gasto' then abs(m.monto) else 0 end), 0)::numeric(16,2)
+  `
+
+  const [gastosSobres, gastosGrupos, gastosTotales] = await Promise.all([
+    filas<{ sobre_id: number; periodo: string; gasto: Dinero }>(
+      db,
+      sql`
+        select
+          m.sobre_id,
+          to_char(m.fecha, 'YYYY-MM') as periodo,
+          ${importeGasto} as gasto
+        from movimientos m
+        join cuentas c on c.id = m.cuenta_id
+        where ${whereGasto}
+        group by m.sobre_id, to_char(m.fecha, 'YYYY-MM')
+      `,
+    ),
+    filas<{ grupo_id: number; periodo: string; gasto: Dinero }>(
+      db,
+      sql`
+        select
+          s.grupo_id,
+          to_char(m.fecha, 'YYYY-MM') as periodo,
+          ${importeGasto} as gasto
+        from movimientos m
+        join cuentas c on c.id = m.cuenta_id
+        join sobres s on s.id = m.sobre_id
+        where ${whereGasto}
+        group by s.grupo_id, to_char(m.fecha, 'YYYY-MM')
+      `,
+    ),
+    filas<{ periodo: string; gasto: Dinero }>(
+      db,
+      sql`
+        select
+          to_char(m.fecha, 'YYYY-MM') as periodo,
+          ${importeGasto} as gasto
+        from movimientos m
+        join cuentas c on c.id = m.cuenta_id
+        join sobres s on s.id = m.sobre_id
+        join grupos g on g.id = s.grupo_id
+        where ${whereGasto}
+          and not g.archivado
+        group by to_char(m.fecha, 'YYYY-MM')
+      `,
+    ),
+  ])
 
   const gastosMap = new Map<string, Dinero>()
   for (const g of gastosSobres) {
     gastosMap.set(`${g.sobre_id}:${g.periodo}`, g.gasto)
+  }
+
+  const gastosDeGrupo = new Map<string, Dinero>()
+  for (const g of gastosGrupos) {
+    gastosDeGrupo.set(`${g.grupo_id}:${g.periodo}`, g.gasto)
+  }
+
+  const totalPorPeriodo = new Map<string, Dinero>()
+  for (const g of gastosTotales) {
+    totalPorPeriodo.set(g.periodo, g.gasto)
   }
 
   const elementosDestacados: ElementoDestacado[] = []
@@ -334,9 +394,20 @@ export async function consultarComparativo(
   }
 
   const gruposComparativos: GrupoComparativo[] = []
+
+  /*
+   * Los totales salen de los agregados de arriba, no de sumar los sobres del grupo en JS.
+   *
+   * El total general lleva `and not g.archivado` para seguir siendo lo que era: la suma de
+   * los grupos que la pantalla lista. `filasGrupos` ya filtra los grupos archivados, asi que
+   * sin ese filtro el total dejaria de ser la suma de las filas de arriba. Es una pregunta
+   * abierta y no se decidio aca —un grupo archivado puede seguir teniendo gasto, y entonces
+   * la fila no se ve pero su dinero si—; este cambio es una limpieza y se limita a mover la
+   * misma aritmetica de sitio.
+   */
   const totalGeneralPorPeriodo: Record<string, Dinero> = {}
   for (const p of listaPeriodos) {
-    totalGeneralPorPeriodo[p] = '0.00'
+    totalGeneralPorPeriodo[p] = totalPorPeriodo.get(p) ?? '0.00'
   }
 
   for (const g of filasGrupos) {
@@ -344,13 +415,7 @@ export async function consultarComparativo(
     const totalesPorPeriodo: Record<string, Dinero> = {}
 
     for (const p of listaPeriodos) {
-      const sumaCent = sobresDelGrupo.reduce((acc, s) => {
-        return acc + aCentimos(s.importes_por_periodo[p] ?? '0.00')
-      }, 0n)
-      totalesPorPeriodo[p] = deCentimos(sumaCent)
-
-      const prevTotalGen = aCentimos(totalGeneralPorPeriodo[p] ?? '0.00')
-      totalGeneralPorPeriodo[p] = deCentimos(prevTotalGen + sumaCent)
+      totalesPorPeriodo[p] = gastosDeGrupo.get(`${g.id}:${p}`) ?? '0.00'
     }
 
     const variacionesGrupo: Record<string, Variacion> = {}

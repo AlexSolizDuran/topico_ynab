@@ -105,7 +105,12 @@ export function FilaCarteraActiva({
         <span className={estilos.itemMoneda}>{moneda}</span>
       </div>
 
-      <a href={`/cartera/${cartera_id}`} className={estilos.entrar}>
+      {/*
+        Entrar lleva al panel con la cartera abierta. Antes iba a `/cartera/<id>`, que era la
+        pagina donde vivia la gestion; ahora esa pagina es `/panel` y se elige la cartera con
+        `?cartera=`, que es el parametro que el selector del panel ya leia.
+      */}
+      <a href={`/panel?cartera=${cartera_id}`} className={estilos.entrar}>
         Entrar
       </a>
 

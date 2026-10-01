@@ -1148,10 +1148,32 @@ export async function eliminarMovimiento(
   db: Base,
   usuario_id: number,
   movimiento_id: number,
-): Promise<{ id: number; eliminados: number }> {
+): Promise<{ id: number; eliminados: number; periodo: string }> {
   const fila = await filaDeMovimiento(db, usuario_id, movimiento_id)
   if (!fila) throw new MovimientoNoExiste()
   if (fila.eliminado_en !== null) throw new MovimientoEliminado()
+
+  /*
+   * El periodo que se movio, para el aviso retroactivo de R3.
+   *
+   * Borrar tambien recalcula: el gasto de un periodo ya comparado deja de contar, y la
+   * comparacion cambia sin que el alta ni la edicion hayan pasado por aca.
+   *
+   * El periodo sale de una consulta y no de `fila.fecha` —que ya esta leido— porque
+   * `periodoSql` deriva el mes en la base a proposito, y esa regla no tiene excepcion. Es
+   * una lectura por indice de la primary key. `restaurarMovimiento` no hace lo mismo y es
+   * correcto: devolver un movimiento no cambia ningun total, porque uno eliminado nunca
+   * contó.
+   *
+   * Es **un** periodo y alcanza: cuando la fila es pata de un traspaso, las dos comparten
+   * `fecha` porque `repos/traspasos.ts` la pasa una sola vez, y por eso la cascada no puede
+   * tocar dos meses distintos.
+   */
+  const [periodo] = await filas<{ periodo: string }>(db, sql`
+    select ${periodoSql<string>(sql.raw('m.fecha'))} as periodo
+    from movimientos m
+    where m.id = ${movimiento_id}
+  `)
 
   return db.transaction(async (tx) => {
     const conexion = tx as Base
@@ -1179,7 +1201,7 @@ export async function eliminarMovimiento(
 
     if (marcadas.length === 0) throw new MovimientoNoExiste()
 
-    return { id: movimiento_id, eliminados: marcadas.length }
+    return { id: movimiento_id, eliminados: marcadas.length, periodo: periodo?.periodo ?? '' }
   })
 }
 

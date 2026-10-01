@@ -60,30 +60,58 @@
   gap: 2.5rem;
 }
 
+/*
+ * Cada grupo es un bloque con su propio filete arriba.
+ *
+ * El separador entre grupos va **entre** los items y no en el primero: con el filete en el
+ * `:first-child` se anula, el primer grupo queda pegado al borde de la tarjeta y el segundo
+ * arranca con una linea que parece un error de maquetado en vez de una division. Cada
+ * bloque abre con su filete y el anterior se lee como el bloque cerrado.
+ */
+.grupoBloque {
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--borde);
+}
+
+.listaGrupos > .grupoBloque:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
 /* ---------------------------------------------------------------------- desplegable */
 
 .desplegable {
-  margin-top: 0.5rem;
+  margin-top: 0.25rem;
 }
 
 .resumen {
   cursor: pointer;
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   color: var(--tinta-tenue);
   transition: color 0.2s ease;
 }
 
 .resumen:hover {
-  color: var(--tinta-media);
+  color: var(--lima);
+}
+
+/* El triangulo nativo marca el estado del pliegue. Se apaga para no competir con el total. */
+.resumen::marker,
+.resumen::-webkit-details-marker {
+  color: var(--tinta-tenue);
 }
 
 /*
  * El filete vertical marca la pertenencia: los sobres cuelgan de su grupo. Sin el, una lista
  * de veinte sobres se lee como una lista mas y se pierde que dependen del grupo de arriba.
+ *
+ * Pega contra el borde de la caja del grupo: antes el margen era de 1rem y el filete
+ * quedaba flotando a mitad de camino entre el titulo del grupo y el primer sobre, que es
+ * exactamente donde no dice de quien es nada.
  */
 .sublista {
-  margin: 0.75rem 0 0 1rem;
-  padding: 0 0 0 1rem;
+  margin: 0.5rem 0 0 0.875rem;
+  padding: 0 0 0 0.875rem;
   border-left: 1px solid var(--borde);
   display: flex;
   flex-direction: column;
@@ -109,12 +137,36 @@
  * Item de lista con borde propio: cuentas, grupos, sobres y metas son bloques que se editan
  * adentro, asi que necesitan recuadro. `.fila` es para lo que no tiene acciones; esto es para
  * lo que abre un `<details>`.
+ *
+ * El `transition` y el `:hover` existen para que la fila se sienta viva al recorrerla con el
+ * mouse: en una cartera con veinte sobres, la que esta bajo el cursor tiene que saberse sin
+ * leerla. Solo se mueve el borde y la sombra —nada de color de fondo— para que el hover no
+ * compita con los colores que **si** significan algo: el rojo del desborde y el ambar del
+ * pendiente.
  */
 .item {
   padding: 1rem 1.125rem;
   border: 1px solid var(--borde);
   border-radius: 0.875rem;
   background-color: var(--superficie);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.item:hover {
+  border-color: var(--borde-vivo);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18);
+}
+
+/* El item archivado no se ilumina: esta fuera de servicio y el hover invita a usarlo. */
+.itemArchivado:hover {
+  border-color: var(--borde);
+  box-shadow: none;
+}
+
+/* El desborde gana siempre: su borde tiene que seguir siendo legible con el cursor encima. */
+.itemNegativo,
+.itemNegativo:hover {
+  border-color: rgba(255, 84, 104, 0.45);
 }
 
 /* Lo archivado se marca con borde punteado: es el mismo objeto, fuera de servicio. */
@@ -156,29 +208,58 @@
   padding: 0.75rem 0.875rem;
 }
 
+/*
+ * La fila de una fila: nombre y detalle a la izquierda, importe a la derecha.
+ *
+ * `align-items: center` en vez de `flex-start`: el importe queda a la altura del nombre, no
+ * pegado al borde de arriba de una caja de dos lineas. Antes, en las filas con una segunda
+ * linea de detalle —el tipo de una cuenta, la fecha de un movimiento— el numero flotaba
+ * arriba y el nombre en el medio, y no se leia como una fila.
+ *
+ * El `gap` de 1rem separa el importe del texto: con 0.75rem y un nombre largo, el importe
+ * parecia pegado a la ultima palabra en vez de alineado a una columna.
+ */
 .itemEncabezado {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
+/* La columna de texto toma el ancho que sobra; el importe no se encoge nunca. */
+.itemEncabezado > :first-child {
+  min-width: 0;
+}
+
+/*
+ * El nombre se parte por palabras en vez de recortarse.
+ *
+ * Los nombres son del usuario y puede poner "Fondo de emergencia para el viaje a Buenos
+ * Aires en diciembre". Con `text-overflow: ellipsis` —que es lo que hacia la fila del resumen
+ * del panel— el nombre se cortaba en "Fondo de emergenci…" y dos sobres con el mismo
+ * comienzo quedaban indistinguibles. Partirlo en dos lineas cuesta una linea de alto y
+ * conserva el dato que identifica la fila.
+ */
 .itemNombre {
   margin: 0;
   font-size: 0.9375rem;
   font-weight: 500;
   color: var(--tinta);
+  overflow-wrap: anywhere;
 }
 
+/* El detalle —fecha, cuenta, tipo— tambien se parte, por la misma razon que el nombre. */
 .itemDetalle {
   margin: 0.125rem 0 0;
   font-size: 0.75rem;
   color: var(--tinta-tenue);
+  overflow-wrap: anywhere;
 }
 
 .itemValor {
   margin: 0;
   flex-shrink: 0;
+  text-align: right;
   font-size: 1.125rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -218,16 +299,44 @@
   color: var(--tinta-tenue);
 }
 
-/* El total de un grupo vive fuera del desplegable: R35 exige que siga visible al plegar. */
+/*
+ * El total de un grupo vive fuera del desplegable: R35 exige que siga visible al plegar.
+ * Acá solo va el **texto** del total; la cifra vive en la fila del grupo, arriba.
+ */
 .totalGrupo {
-  margin: 0.5rem 0 0 1rem;
-  font-size: 0.8125rem;
+  margin: 0.375rem 0 0;
+  padding-left: 0.875rem;
+  font-size: 0.75rem;
   color: var(--tinta-tenue);
 }
 
-.totalGrupoValor {
-  font-weight: 700;
+/*
+ * La fila del grupo: nombre y contador a la izquierda, total a la derecha, menu al lado.
+ *
+ * No lleva el recuadro de `.item` a proposito. Un grupo es una **cabecera de seccion**, y
+ * dibujarlo con la misma caja que sus hijos —los sobres— lo hacia parecer un sobre mas; el
+ * desborde de un sobre se distingue por su recuadro, y si el grupo lo comparte tambien, el
+ * ojo ya no sabe que recuadro significa problema. Ademas el total alineado a la derecha
+ * forma una columna de cifras que se lee de un vistazo comparando grupos.
+ */
+.filaGrupo {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.125rem 0.25rem 0.5rem;
+}
+
+.grupoTexto {
+  min-width: 0;
+}
+
+.grupoTotal {
+  margin: 0 0 0 auto;
+  flex-shrink: 0;
+  font-family: var(--fuente-cifra);
   font-variant-numeric: tabular-nums;
+  font-size: 1.0625rem;
+  font-weight: 700;
   color: var(--tinta);
 }
 
@@ -1173,6 +1282,69 @@
   color: var(--tinta-tenue);
 }
 
+/* ------------------------------------------------------------------- movimientos */
+
+/*
+ * Los movimientos van agrupados por dia: una cabecera de dia con su total, y las filas de ese
+ * dia debajo.
+ *
+ * El agrupado responde a la pregunta que la lista sin agrupar no deja contestar —"cuanto gaste
+ * el martes"— sin que el usuario recorra ochenta filas. El dia se lee como una linea de
+ * encabezado: el dia de la semana y el numero del dia adelante, porque eso es lo que uno
+ * busca, y el total a la derecha en la tipografia de cifras, que es lo que uno compara.
+ *
+ * La cabecera **no** es un boton ni un `<details>`: plegar un dia esconderia el total que el
+ * agrupado acaba de poner a la vista.
+ */
+.bloqueDias {
+  margin-top: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.dia {
+  display: flex;
+  flex-direction: column;
+}
+
+.diaCabecera {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--borde-vivo);
+}
+
+.diaFecha {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--tinta);
+  text-transform: capitalize;
+}
+
+/* La cuenta de movimientos va en el medio: es contexto, no un dato que se compare. */
+.diaConteo {
+  font-size: 0.75rem;
+  color: var(--tinta-tenue);
+}
+
+.diaTotal {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-family: var(--fuente-cifra);
+  font-variant-numeric: tabular-nums;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--tinta-media);
+}
+
+/* La lista del dia arranca pegada a su cabecera, sin el margen que usan las listas sueltas. */
+.dia > .lista {
+  margin-top: 0.625rem;
+}
+
 /* ---------------------------------------------------------------------- semanticos */
 
 .positivo {
@@ -1185,6 +1357,221 @@
 
 .atencion {
   color: var(--ambar);
+}
+
+/* ---------------------------------------------------------------------- modales */
+
+/*
+ * La pagina es de lectura; lo que se crea o se edita vive en un modal.
+ *
+ * El `<dialog>` nativo hace el trabajo pesado —capa superior, fondo atenuado, trampa de
+ * foco y Escape— sin una linea de estado de apertura, asi que no hay `useState` que se
+ * desincronice con la Server Action.
+ *
+ * **El contenido va siempre dentro del dialog, nunca con `{abierto && ...}`.** Un dialog
+ * cerrado sigue en el DOM y el HTML del servidor lo sigue emitiendo entero, que es lo que
+ * necesitan las pruebas de pagina; y de paso no se pierde el estado de `useActionState`
+ * cuando una accion vuelve con error: el modal ya estaba montado y el error aparece solo.
+ *
+ * `max-height` con `overflow` porque un formulario de sobre trae asignaciones, y en una
+ * pantalla angosta el dialog no puede crecer mas alla del viewport.
+ */
+.modal {
+  width: min(34rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 3rem);
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--borde-vivo);
+  border-radius: 1rem;
+  background-color: var(--fondo-medio);
+  color: var(--tinta-media);
+  box-shadow: 0 1.5rem 3rem rgba(0, 0, 0, 0.45);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.modalAncho {
+  width: min(46rem, calc(100vw - 2rem));
+}
+
+/* El fondo atenuado es `::backdrop` y no un div: es lo que el navegador pinta detras. */
+.modal::backdrop {
+  background-color: var(--velo);
+  backdrop-filter: blur(3px);
+}
+
+/* El dialog no trae borde ni padding por defecto en el navegador, y `display` lo cambia. */
+.modal:not([open]) {
+  display: none;
+}
+
+.modalCuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem 1.25rem 1.5rem;
+}
+
+.modalEncabezado {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.modalTitulo {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--tinta);
+}
+
+/* ---------------------------------------------------------------------- disparadores */
+
+/*
+ * El boton de "⋯" de cada fila.
+ *
+ * Es un boton chico y de tinta tenue a proposito: las acciones de una fila son la mayoria
+ * de lo que se hace con ella, asi que si compiten con el nombre y el importe por el peso
+ * visual, la fila deja de leerse como lo que es —un sobre con un disponible— y pasa a ser
+ * un panel de botones.
+ */
+.punto {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 0.5rem;
+  background: none;
+  color: var(--tinta-tenue);
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.punto:hover {
+  color: var(--tinta);
+  background-color: var(--superficie-alta);
+}
+
+.punto:focus-visible {
+  outline: 2px solid var(--lima);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------------- menu de fila */
+
+/*
+ * Las acciones de una fila, en una lista vertical.
+ *
+ * Sin `<details>` a proposito: el menu vive dentro del panel de cuentas, que va **antes**
+ * del de grupos y sobres, y `tests/grupos/plegado.test.ts` toma el primer `<details>` del
+ * HTML asumiendo que es el pliegue del grupo. Un `<details>` antes lo descoloca en
+ * silencio. Por eso el despliegue de aca usa `hidden`, que deja el contenido en el DOM.
+ */
+.menu {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.menuItem {
+  display: block;
+  width: 100%;
+  padding: 0.625rem 0.25rem;
+  border: 0;
+  border-bottom: 1px solid var(--trazo-suave);
+  background: none;
+  text-align: left;
+  font-size: 0.875rem;
+  color: var(--tinta);
+  transition: color 0.2s ease;
+}
+
+.menuItem:hover {
+  color: var(--lima);
+}
+
+.menuItem:focus-visible {
+  outline: 2px solid var(--lima);
+  outline-offset: -2px;
+}
+
+.menuItem:last-child {
+  border-bottom: 0;
+}
+
+/* Lo que borra o archiva: mismo tamano que el resto, color de riesgo. El texto ya dice
+   que es; el color acompana, no informa. */
+.menuPeligro {
+  color: #ff9aa6;
+}
+
+.menuPeligro:hover {
+  color: #ffb8c0;
+}
+
+/* ---------------------------------------------------------------------- confirmacion */
+
+/*
+ * El paso previo a archivar o borrar.
+ *
+ * No dice "estas seguro": dice **que pasa con los datos**. Un "¿seguro?" no le dice al
+ * usuario si el movimiento cae con su pata de traspaso, si el sobre deja de admitir
+ * asignaciones o si el grupo conserva sus sobres. Esa consecuencia es la que hace que la
+ * confirmacion valga algo.
+ */
+.confirmacion {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: 0.875rem;
+  border: 1px solid var(--borde-vivo);
+  border-radius: 0.75rem;
+  background-color: var(--tinte-1);
+}
+
+.confirmacionTitulo {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--tinta);
+}
+
+.confirmacionTexto {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--tinta-media);
+}
+
+.confirmacionAcciones {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* ---------------------------------------------------------------------- paneles */
+
+.panelSeccion {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.panelCabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
 }
 
 /* ---------------------------------------------------------------------- adaptacion */

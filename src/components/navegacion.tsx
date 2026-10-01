@@ -58,10 +58,10 @@ export function Navegacion() {
    * no hay forma de saber que ya estas ahi: con cuatro secciones y una barra fija, perder
    * la ubicacion obliga a releer la pagina.
    *
-   * El detalle de una cartera (`/cartera/<id>`) cuelga del panel, asi que marca "Panel" y no
-   * queda ninguno iluminado. La comparacion es por prefijo y no por igualdad exacta porque
-   * `/carteras` y `/cartera/<id>` comparten el prefijo "/cartera": con igualdad, "/carteras" no
-   * encenderia "Carteras" por un caracter de diferencia.
+   * Antes el panel absorbia tambien `/cartera/<id>` —el detalle de una cartera, que era una
+   * pagina aparte— y por eso el caso especial comparaba dos prefijos. Esa pagina ya no existe:
+   * la operacion de la cartera se hizo `/panel`, con la cartera abierta en `?cartera=`. As��� que
+   * `/panel` se compara por prefijo y no mas.
    */
   const ruta = usePathname()
 
@@ -74,15 +74,7 @@ export function Navegacion() {
 
         <nav aria-label="Principal" className="flex flex-wrap items-center gap-x-4 gap-y-1">
           {ENLACES.map((enlace) => {
-            /*
-             * `/panel` absorbe las rutas de cartera para que el detalle no deje el menu sin
-             * seccion activa; las otras tres se comparan por prefijo, que para rutas planas
-             * es lo mismo que por igualdad exacta.
-             */
-            const activo =
-              enlace.href === '/panel'
-                ? ruta.startsWith('/panel') || ruta.startsWith('/cartera/')
-                : ruta.startsWith(enlace.href)
+            const activo = ruta.startsWith(enlace.href)
 
             return (
               <Link

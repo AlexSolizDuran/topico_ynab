@@ -32,6 +32,7 @@ import {
 } from '../sobres/acciones'
 import { formatear } from '../dinero'
 import { Aviso, Boton, Campo } from './sesion'
+import { Confirmar, MenuDeFila } from './modal'
 import detalle from './detalle.module.css'
 
 /**
@@ -208,11 +209,17 @@ function FilaAsignacion({
   )
 }
 
-/**
- * Un sobre con su disponible y las cinco cosas que se le pueden hacer.
+/*
+ * Un sobre con su disponible y las ocho cosas que se le pueden hacer.
  *
- * Los formularios van en `<details>` para no mostrar quince campos por sobre: la accion
- * mas comun —asignar— queda a la vista y el resto se abre.
+ * La fila es de lectura: nombre, disponible y, si esta en negativo, el aviso de que el
+ * tapado es manual. Las ocho acciones —asignar, tapar, mover, renombrar, reordenar, cambiar
+ * de grupo, archivar y borrar— viven en el modal del "⋯".
+ *
+ * Asignar deja de estar a la vista, y eso es una decision: era la accion de todos los dias
+ * y ganaba espacio a costa de empujar hacia abajo el nombre y el disponible de cada sobre.
+ * Con ocho formularios embebidos, una cartera de veinte sobres es veinte veces quince
+ * campos, y la fila deja de leerse como lo que es. Sigue siendo la primera opcion del menu.
  */
 export function FilaSobre({
   cartera_id,
@@ -298,88 +305,88 @@ export function FilaSobre({
         </p>
       ) : null}
 
-      {/* Asignar: la operacion de todos los dias, a la vista. */}
-      <form action={accionAsignar} className={detalle.formularioEnLinea}>
-        <PeriodoOculto periodo={periodo} />
-        {asignar.error ? (
-          <p role="alert" className={detalle.error}>
-            {asignar.error}
-          </p>
-        ) : null}
-        {asignar.aviso ? (
-          <p role="status" className={detalle.exito}>
-            {asignar.aviso}
-          </p>
-        ) : null}
-        <div className={detalle.campoCrece}>
-          <Campo
-            nombre="monto"
-            etiqueta="Asignar"
-            error={asignar.campos?.monto}
-            ayuda="Solo importes positivos."
-          />
-        </div>
-        <AccionPendiente>Asignar</AccionPendiente>
-      </form>
-
-      <details className={detalle.desplegable}>
-        <summary className={detalle.resumen}>Otras acciones</summary>
-
-        <div className={detalle.formulario}>
-          {negativo ? (
-            <form action={accionTapar} className={detalle.formularioEnLinea}>
-              <PeriodoOculto periodo={periodo} />
-              {tapar.error ? (
-                <p role="alert" className={detalle.error}>
-                  {tapar.error}
-                </p>
-              ) : null}
-              {tapar.aviso ? (
-                <p role="status" className={detalle.exito}>
-                  {tapar.aviso}
-                </p>
-              ) : null}
-              <div className={detalle.campoCrece}>
-                <Campo
-                  nombre="monto"
-                  etiqueta="Tapar el desborde"
-                  error={tapar.campos?.monto}
-                  ayuda="No puede pasar de lo que el sobre debe."
-                />
-              </div>
-              <AccionPendiente>Tapar</AccionPendiente>
-            </form>
-          ) : null}
-
-          {otrosSobres.length > 0 ? (
-            <form action={accionMover} className={detalle.formularioEnLinea}>
-              <PeriodoOculto periodo={periodo} />
-              {mover.error ? (
-                <p role="alert" className={detalle.error}>
-                  {mover.error}
-                </p>
-              ) : null}
-              {mover.aviso ? (
-                <p role="status" className={detalle.exito}>
-                  {mover.aviso}
-                </p>
-              ) : null}
-              <div className={detalle.campoCrece}>
-                <Campo nombre="monto" etiqueta="Mover desde aca" error={mover.campos?.monto} />
-              </div>
-              <Selector
-                opciones={otrosSobres}
-                nombre="destino_id"
-                etiqueta="Hacia el sobre"
-                error={mover.campos?.destino_id}
-              />
-              <AccionPendiente>Mover</AccionPendiente>
-            </form>
-          ) : null}
-
-          <div className={detalle.bloque}>
-            <h5 className={detalle.rotuloInterno}>Asignaciones de este sobre</h5>
-            {asignaciones.length === 0 ? (
+      <MenuDeFila
+        titulo={`Acciones de ${nombre}`}
+        acciones={[
+          {
+            etiqueta: 'Asignar',
+            contenido: (
+              <>
+                {asignar.error ? <Aviso tono="error">{asignar.error}</Aviso> : null}
+                {asignar.aviso ? <Aviso tono="exito">{asignar.aviso}</Aviso> : null}
+                <form action={accionAsignar} className={detalle.formularioEnLinea}>
+                  <PeriodoOculto periodo={periodo} />
+                  <div className={detalle.campoCrece}>
+                    <Campo
+                      nombre="monto"
+                      etiqueta="Asignar"
+                      error={asignar.campos?.monto}
+                      ayuda="Solo importes positivos."
+                    />
+                  </div>
+                  <AccionPendiente>Asignar</AccionPendiente>
+                </form>
+              </>
+            ),
+          },
+          ...(negativo
+            ? [
+                {
+                  etiqueta: 'Tapar el desborde',
+                  contenido: (
+                    <>
+                      {tapar.error ? <Aviso tono="error">{tapar.error}</Aviso> : null}
+                      {tapar.aviso ? <Aviso tono="exito">{tapar.aviso}</Aviso> : null}
+                      <form action={accionTapar} className={detalle.formularioEnLinea}>
+                        <PeriodoOculto periodo={periodo} />
+                        <div className={detalle.campoCrece}>
+                          <Campo
+                            nombre="monto"
+                            etiqueta="Tapar el desborde"
+                            error={tapar.campos?.monto}
+                            ayuda="No puede pasar de lo que el sobre debe."
+                          />
+                        </div>
+                        <AccionPendiente>Tapar</AccionPendiente>
+                      </form>
+                    </>
+                  ),
+                },
+              ]
+            : []),
+          ...(otrosSobres.length > 0
+            ? [
+                {
+                  etiqueta: 'Mover a otro sobre',
+                  contenido: (
+                    <>
+                      {mover.error ? <Aviso tono="error">{mover.error}</Aviso> : null}
+                      {mover.aviso ? <Aviso tono="exito">{mover.aviso}</Aviso> : null}
+                      <form action={accionMover} className={detalle.formularioEnLinea}>
+                        <PeriodoOculto periodo={periodo} />
+                        <div className={detalle.campoCrece}>
+                          <Campo
+                            nombre="monto"
+                            etiqueta="Mover desde aca"
+                            error={mover.campos?.monto}
+                          />
+                        </div>
+                        <Selector
+                          opciones={otrosSobres}
+                          nombre="destino_id"
+                          etiqueta="Hacia el sobre"
+                          error={mover.campos?.destino_id}
+                        />
+                        <AccionPendiente>Mover</AccionPendiente>
+                      </form>
+                    </>
+                  ),
+                },
+              ]
+            : []),
+          {
+            etiqueta: 'Asignaciones de este sobre',
+            contenido: asignaciones.length === 0 ? (
               <p className={detalle.nota}>
                 Este sobre todavia no tiene asignaciones. Su disponible esta en cero.
               </p>
@@ -395,98 +402,119 @@ export function FilaSobre({
                   />
                 ))}
               </ul>
-            )}
-          </div>
+            ),
+          },
+          {
+            etiqueta: 'Renombrar',
+            contenido: (
+              <>
+                {renombrar.error ? <Aviso tono="error">{renombrar.error}</Aviso> : null}
+                {renombrar.aviso ? <Aviso tono="exito">{renombrar.aviso}</Aviso> : null}
+                <form action={accionRenombrar} className={detalle.formularioEnLinea}>
+                  <div className={detalle.campoCrece}>
+                    <Campo nombre="nombre" etiqueta="Renombrar" error={renombrar.campos?.nombre} />
+                  </div>
+                  <AccionPendiente>Renombrar</AccionPendiente>
+                </form>
+              </>
+            ),
+          },
+          {
+            etiqueta: 'Cambiar de grupo o de orden',
+            contenido: (
+              <>
+                {reordenar.error ? <Aviso tono="error">{reordenar.error}</Aviso> : null}
+                <form action={accionReordenar} className={detalle.formularioEnLinea}>
+                  <div className={detalle.campoCrece}>
+                    <Campo nombre="orden" etiqueta="Orden" error={reordenar.campos?.orden} />
+                  </div>
+                  <AccionPendiente>Reordenar</AccionPendiente>
+                </form>
 
-          <form action={accionRenombrar} className={detalle.formularioEnLinea}>
-            {renombrar.error ? (
-              <p role="alert" className={detalle.error}>
-                {renombrar.error}
-              </p>
-            ) : null}
-            {renombrar.aviso ? (
-              <p role="status" className={detalle.exito}>
-                {renombrar.aviso}
-              </p>
-            ) : null}
-            <div className={detalle.campoCrece}>
-              <Campo nombre="nombre" etiqueta="Renombrar" error={renombrar.campos?.nombre} />
-            </div>
-            <AccionPendiente>Renombrar</AccionPendiente>
-          </form>
-
-          <form action={accionReordenar} className={detalle.formularioEnLinea}>
-            {reordenar.error ? (
-              <p role="alert" className={detalle.error}>
-                {reordenar.error}
-              </p>
-            ) : null}
-            <div className={detalle.campoCrece}>
-              <Campo nombre="orden" etiqueta="Orden" error={reordenar.campos?.orden} />
-            </div>
-            <AccionPendiente>Reordenar</AccionPendiente>
-          </form>
-
-          <form action={accionGrupo} className={detalle.formularioEnLinea}>
-            {cambiarGrupo.error ? (
-              <p role="alert" className={detalle.error}>
-                {cambiarGrupo.error}
-              </p>
-            ) : null}
-            <Selector
-              opciones={grupos}
-              nombre="grupo_id"
-              etiqueta="Grupo"
-              seleccionado={grupo_id}
-              error={cambiarGrupo.campos?.grupo_id}
-            />
-            <AccionPendiente>Cambiar de grupo</AccionPendiente>
-          </form>
-
-          <div className={detalle.acciones}>
-            <form action={accionArchivar}>
-              <PeriodoOculto periodo={periodo} />
-              {archivar.error ? (
-                <p role="alert" className={detalle.error}>
-                  {archivar.error}
-                </p>
-              ) : null}
-              {archivar.aviso ? (
-                <p role="status" className={detalle.exito}>
-                  {archivar.aviso}
-                </p>
-              ) : null}
-              <Boton>Archivar</Boton>
-            </form>
-
-            <form action={accionEliminar}>
-              <PeriodoOculto periodo={periodo} />
-              {eliminar.error ? (
-                <p role="alert" className={detalle.error}>
-                  {eliminar.error}
-                </p>
-              ) : null}
-              {eliminar.aviso ? (
-                <p role="status" className={detalle.exito}>
-                  {eliminar.aviso}
-                </p>
-              ) : null}
-              <Boton>Borrar</Boton>
-              {eliminar.ofrece === 'archivar' ? (
-                <p className={detalle.nota}>
-                  Archivalo en su lugar: conserva el historial y sigue admitiendo devoluciones.
-                </p>
-              ) : null}
-            </form>
-          </div>
-
-          {!eliminable ? (
-            <p className={detalle.nota}>
-              Este sobre no se puede borrar: tiene movimientos o saldo. Archivarlo conserva todo.
-            </p>
-          ) : null}
-        </div>
-      </details>
+                {cambiarGrupo.error ? <Aviso tono="error">{cambiarGrupo.error}</Aviso> : null}
+                {cambiarGrupo.aviso ? (
+                  <Aviso tono="exito">{cambiarGrupo.aviso}</Aviso>
+                ) : null}
+                <form action={accionGrupo} className={detalle.formularioEnLinea}>
+                  <Selector
+                    opciones={grupos}
+                    nombre="grupo_id"
+                    etiqueta="Grupo"
+                    seleccionado={grupo_id}
+                    error={cambiarGrupo.campos?.grupo_id}
+                  />
+                  <AccionPendiente>Cambiar de grupo</AccionPendiente>
+                </form>
+              </>
+            ),
+          },
+          {
+            /*
+             * Archivar exige disponible cero —`repos/sobres.ts` tira `SobreConSaldo`—, y eso
+             * es lo que el aviso dice antes de que el usuario lo descubra por el error. Un
+             * sobre archivado conserva el historial y sigue admitiendo devoluciones.
+             */
+            etiqueta: 'Archivar',
+            peligro: true,
+            contenido: (
+              <>
+                {archivar.error ? <Aviso tono="error">{archivar.error}</Aviso> : null}
+                {archivar.aviso ? <Aviso tono="exito">{archivar.aviso}</Aviso> : null}
+                <Confirmar
+                  titulo="Archivar este sobre"
+                  childrenAcciones={
+                    <form action={accionArchivar}>
+                      <PeriodoOculto periodo={periodo} />
+                      <AccionPendiente>Archivar</AccionPendiente>
+                    </form>
+                  }
+                >
+                  <p>
+                    Solo se archiva con el disponible en cero. Queda con su historial, deja de
+                    recibir asignaciones y sigue admitiendo devoluciones.
+                  </p>
+                </Confirmar>
+              </>
+            ),
+          },
+          {
+            etiqueta: 'Borrar',
+            peligro: true,
+            contenido: (
+              <>
+                {eliminar.error ? <Aviso tono="error">{eliminar.error}</Aviso> : null}
+                {eliminar.aviso ? <Aviso tono="exito">{eliminar.aviso}</Aviso> : null}
+                <Confirmar
+                  titulo="Borrar este sobre"
+                  childrenAcciones={
+                    <form action={accionEliminar}>
+                      <PeriodoOculto periodo={periodo} />
+                      <AccionPendiente>Borrar</AccionPendiente>
+                    </form>
+                  }
+                >
+                  {eliminable ? (
+                    <p>
+                      No tiene movimientos ni saldo, asi que se puede borrar. El sobre deja de
+                      existir; sus asignaciones se van con el.
+                    </p>
+                  ) : (
+                    <p>
+                      Este sobre no se puede borrar: tiene movimientos o saldo, y borrario
+                      romperia su historial. Archivalo en su lugar y conserva todo.
+                    </p>
+                  )}
+                  {eliminar.ofrece === 'archivar' ? (
+                    <p className={detalle.nota}>
+                      Archivalo en su lugar: conserva el historial y sigue admitiendo devoluciones.
+                    </p>
+                  ) : null}
+                </Confirmar>
+              </>
+            ),
+          },
+        ]}
+      />
     </li>
   )
 }

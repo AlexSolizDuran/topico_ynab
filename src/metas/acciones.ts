@@ -88,7 +88,7 @@ export async function accionCrearMeta(
     const carteraIdStr = formulario.get('cartera_id')
     const carteraId = aEntero(carteraIdStr ? String(carteraIdStr) : null)
     if (carteraId) {
-      revalidatePath(`/cartera/${carteraId}`)
+      revalidatePath('/panel')
     }
 
     return { ok: true, aviso: 'Meta de ahorro fijada con exito.' }
@@ -117,7 +117,7 @@ export async function accionCompletarMeta(
     await completarMeta(db, sesion.usuario_id, id, periodo)
 
     if (carteraId) {
-      revalidatePath(`/cartera/${carteraId}`)
+      revalidatePath('/panel')
     }
 
     return { ok: true, aviso: '¡Felicidades! Meta completada con exito.' }
@@ -145,7 +145,7 @@ export async function accionAbandonarMeta(
     await abandonarMeta(db, sesion.usuario_id, id)
 
     if (carteraId) {
-      revalidatePath(`/cartera/${carteraId}`)
+      revalidatePath('/panel')
     }
 
     return { ok: true, aviso: 'Meta abandonada.' }

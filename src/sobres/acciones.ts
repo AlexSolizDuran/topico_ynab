@@ -121,7 +121,7 @@ function aResultado(error: unknown): ResultadoDeSobre {
 
 /** El camino de la pagina de cartera, que es donde vive todo lo de sobres. */
 function refrescar(cartera_id: number): void {
-  revalidatePath(`/cartera/${cartera_id}`)
+  revalidatePath('/panel')
 }
 
 export async function accionCrearSobre(

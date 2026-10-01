@@ -23,6 +23,7 @@ import {
 import { TIPOS_DE_CUENTA } from '../cuentas/validacion'
 import { formatear } from '../dinero'
 import { Aviso, Boton, Campo } from './sesion'
+import { Confirmar, MenuDeFila } from './modal'
 import detalle from './detalle.module.css'
 
 const INICIAL = { ok: false, error: undefined, campos: undefined, aviso: undefined } as const
@@ -132,6 +133,11 @@ export function FilaCuenta({
 
   const enRojo = saldo.trim().startsWith('-')
 
+  /*
+   * La fila es de lectura: nombre, tipo y saldo. Las cuatro acciones viven en el modal del
+   * "⋯", cada una con su formulario y con su error al lado, para que un rechazo aparezca
+   * junto al campo marcado y no en la punta de la tarjeta.
+   */
   return (
     <li className={detalle.item}>
       <div className={detalle.itemEncabezado}>
@@ -146,51 +152,95 @@ export function FilaCuenta({
         </p>
       </div>
 
-      {estado.error ? <Aviso tono="error">{estado.error}</Aviso> : null}
-      {estadoSaldo.error ? <Aviso tono="error">{estadoSaldo.error}</Aviso> : null}
-      {estadoTipo.error ? <Aviso tono="error">{estadoTipo.error}</Aviso> : null}
-      {estadoArchivo.error ? <Aviso tono="error">{estadoArchivo.error}</Aviso> : null}
-      {estado.aviso ? <Aviso tono="exito">{estado.aviso}</Aviso> : null}
-      {estadoSaldo.aviso ? <Aviso tono="exito">{estadoSaldo.aviso}</Aviso> : null}
-
-      <details className={detalle.desplegable}>
-        <summary className={detalle.resumen}>Editar cuenta</summary>
-
-        <form action={renombrar} className={detalle.formularioCercano}>
-          <div className={detalle.crece}>
-            <Campo nombre="nombre" etiqueta="Nuevo nombre" error={estado.campos?.nombre} />
-          </div>
-          <AccionPendiente>Renombrar</AccionPendiente>
-        </form>
-
-        <form action={corregir} className={detalle.formularioCercano}>
-          <div className={detalle.crece}>
-            <Campo
-              nombre="saldo_inicial"
-              etiqueta="Corregir saldo inicial"
-              error={estadoSaldo.campos?.saldo_inicial}
-              ayuda="El saldo derivado se ajusta en el acto."
-            />
-          </div>
-          <AccionPendiente>Corregir</AccionPendiente>
-        </form>
-
-        <form action={cambiarTipo} className={detalle.formularioCercano}>
-          <div className={detalle.crece}>
-            <SelectorTipo valor={tipo} />
-          </div>
-          <AccionPendiente>Cambiar tipo</AccionPendiente>
-        </form>
-        {tieneMovimientos ? (
-          <p className={detalle.notaAtencion}>
-            Esta cuenta tiene movimientos, asi que el tipo ya no se puede cambiar.
-          </p>
-        ) : null}
-
-        <form action={archivar} className={detalle.formularioCercano}>
-          <AccionPendiente>Archivar cuenta</AccionPendiente>
-        </form>
-      </details>
+      <MenuDeFila
+        titulo={`Acciones de ${nombre}`}
+        acciones={[
+          {
+            etiqueta: 'Renombrar',
+            contenido: (
+              <>
+                {estado.error ? <Aviso tono="error">{estado.error}</Aviso> : null}
+                {estado.aviso ? <Aviso tono="exito">{estado.aviso}</Aviso> : null}
+                <form action={renombrar} className={detalle.formularioCercano}>
+                  <div className={detalle.crece}>
+                    <Campo nombre="nombre" etiqueta="Nuevo nombre" error={estado.campos?.nombre} />
+                  </div>
+                  <AccionPendiente>Renombrar</AccionPendiente>
+                </form>
+              </>
+            ),
+          },
+          {
+            etiqueta: 'Corregir saldo inicial',
+            contenido: (
+              <>
+                {estadoSaldo.error ? <Aviso tono="error">{estadoSaldo.error}</Aviso> : null}
+                {estadoSaldo.aviso ? <Aviso tono="exito">{estadoSaldo.aviso}</Aviso> : null}
+                <form action={corregir} className={detalle.formularioCercano}>
+                  <div className={detalle.crece}>
+                    <Campo
+                      nombre="saldo_inicial"
+                      etiqueta="Corregir saldo inicial"
+                      error={estadoSaldo.campos?.saldo_inicial}
+                      ayuda="El saldo derivado se ajusta en el acto."
+                    />
+                  </div>
+                  <AccionPendiente>Corregir</AccionPendiente>
+                </form>
+              </>
+            ),
+          },
+          {
+            etiqueta: 'Cambiar tipo',
+            contenido: (
+              <>
+                {estadoTipo.error ? <Aviso tono="error">{estadoTipo.error}</Aviso> : null}
+                {estadoTipo.aviso ? <Aviso tono="exito">{estadoTipo.aviso}</Aviso> : null}
+                <form action={cambiarTipo} className={detalle.formularioCercano}>
+                  <div className={detalle.crece}>
+                    <SelectorTipo valor={tipo} />
+                  </div>
+                  <AccionPendiente>Cambiar tipo</AccionPendiente>
+                </form>
+                {tieneMovimientos ? (
+                  <p className={detalle.notaAtencion}>
+                    Esta cuenta tiene movimientos, asi que el tipo ya no se puede cambiar.
+                  </p>
+                ) : null}
+              </>
+            ),
+          },
+          {
+            /*
+             * Archivar exige saldo cero —`repos/cuentas.ts` tira `SaldoNoCero`—, y eso es lo
+             * que el aviso dice antes de que el usuario lo descubra por el error.
+             */
+            etiqueta: 'Archivar cuenta',
+            peligro: true,
+            contenido: (
+              <>
+                {estadoArchivo.error ? <Aviso tono="error">{estadoArchivo.error}</Aviso> : null}
+                {estadoArchivo.aviso ? (
+                  <Aviso tono="exito">{estadoArchivo.aviso}</Aviso>
+                ) : null}
+                <Confirmar
+                  titulo="Archivar esta cuenta"
+                  childrenAcciones={
+                    <form action={archivar}>
+                      <AccionPendiente>Archivar cuenta</AccionPendiente>
+                    </form>
+                  }
+                >
+                  <p>
+                    Solo se archiva con el saldo en cero. Queda en la lista de archivadas con
+                    su historial, y vuelve a estar disponible con "Restaurar".
+                  </p>
+                </Confirmar>
+              </>
+            ),
+          },
+        ]}
+      />
     </li>
   )
 }

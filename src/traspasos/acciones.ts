@@ -121,7 +121,7 @@ export async function accionRegistrarTraspaso(
       comercio: validado.comercio === '' ? null : validado.comercio,
     })
 
-    revalidatePath(`/cartera/${cartera_id}`)
+    revalidatePath('/panel')
     return {
       ok: true,
       // El aviso del repositorio, si vino, viaja aqui. No se arma un mensaje propio: el
@@ -173,7 +173,7 @@ export async function accionEditarTraspaso(
       comercio: validado.comercio === '' ? null : validado.comercio,
     })
 
-    revalidatePath(`/cartera/${cartera_id}`)
+    revalidatePath('/panel')
     return {
       ok: true,
       aviso: corregido.aviso ?? 'El traspaso quedo corregido.',

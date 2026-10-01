@@ -104,7 +104,7 @@ export async function accionCrearReglaRecurrente(
     const db = obtenerCliente()
     await crearReglaRecurrente(db, sesion.usuario_id, parseado.data)
 
-    revalidatePath(`/cartera/${parseado.data.cartera_id}`)
+    revalidatePath('/panel')
     return { ok: true, aviso: 'Regla recurrente creada con exito.' }
   } catch (error) {
     return traducirError(error)
@@ -156,7 +156,7 @@ export async function accionEditarReglaRecurrente(
     await editarReglaRecurrente(db, sesion.usuario_id, parseado.data)
 
     if (carteraId) {
-      revalidatePath(`/cartera/${carteraId}`)
+      revalidatePath('/panel')
     }
     return { ok: true, aviso: 'Regla recurrente actualizada con exito.' }
   } catch (error) {
@@ -183,7 +183,7 @@ export async function accionAlternarReglaRecurrente(
     await alternarEstadoReglaRecurrente(db, sesion.usuario_id, id, activa)
 
     if (carteraId) {
-      revalidatePath(`/cartera/${carteraId}`)
+      revalidatePath('/panel')
     }
     return {
       ok: true,
@@ -212,7 +212,7 @@ export async function accionEliminarReglaRecurrente(
     await eliminarReglaRecurrente(db, sesion.usuario_id, id)
 
     if (carteraId) {
-      revalidatePath(`/cartera/${carteraId}`)
+      revalidatePath('/panel')
     }
     return { ok: true, aviso: 'Regla recurrente eliminada.' }
   } catch (error) {
@@ -232,7 +232,7 @@ export async function accionMaterializarRecurrencias(
     const resultado = await materializarRecurrencias(db, sesion.usuario_id, cartera_id, hasta)
 
     if (resultado.totalGenerados > 0) {
-      revalidatePath(`/cartera/${cartera_id}`)
+      revalidatePath('/panel')
       return {
         ok: true,
         generados: resultado.totalGenerados,

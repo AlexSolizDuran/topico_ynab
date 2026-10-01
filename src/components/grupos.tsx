@@ -4,16 +4,14 @@
  * Componentes de grupos.
  *
  * Un grupo no tiene saldo: por eso no hay ningun `formatear` en este archivo. Lo que
- * se muestra es el nombre, el orden y si esta archivado. El total de cada grupo lo
- * agreguen sus sobres, y llega con `050-sobres`.
+ * se muestra es el nombre y la posicion. El total de cada grupo lo agregan sus sobres.
  *
- * Plegar y desplegar es estado del cliente y no una peticion: es una preferencia de
- * como se esta leyendo la lista, no un cambio en los datos. Por eso se resuelve con
- * `useState` y no con una Server Action — mandarla al servidor haria que cada
- * despliegue del grupo reescribiera lo que el usuario tiene abierto.
+ * Esta tarjeta es de lectura: nombre, posicion y el "⋯" con las tres acciones. El pliegue
+ * **no** vive aca sino en el `<details>` que la pagina pone al lado del total, porque R35
+ * pide que plegar esconda los sobres y deje el total a la vista, y un estado de React
+ * dentro de la tarjeta no puede hacer las dos cosas: el total esta fuera de ella.
  */
 
-import { useState } from 'react'
 import { useFormStatus } from 'react-dom'
 import { useActionState } from 'react'
 import {
@@ -25,6 +23,7 @@ import {
   type ResultadoDeGrupo,
 } from '../grupos/acciones'
 import { Aviso, Boton, Campo } from './sesion'
+import { Confirmar, MenuDeFila } from './modal'
 import detalle from './detalle.module.css'
 
 const INICIAL = { ok: false, error: undefined, campos: undefined, aviso: undefined } as const
@@ -55,21 +54,36 @@ export function FormularioNuevoGrupo({ cartera_id }: { cartera_id: number }) {
   )
 }
 
+/**
+ * Un grupo con su total y su cantidad de sobres.
+ *
+ * El total y el contador llegan desde la pagina, que es quien ya los tiene calculados y
+ * formatea con `formatear` —este archivo no formatea nada porque un grupo no tiene saldo
+ * propio: el total es la suma de los disponibles de los sobres que contiene, y cada uno
+ * de esos importes ya viene formateado de su propia fila.
+ *
+ * Los tres datos van en la **misma fila**: nombre a la izquierda, contador al lado y total
+ * a la derecha. Antes el nombre y las acciones vivian en una tarjeta y el total en un
+ * parrafo suelto debajo, con lo que"How much do I have in Needs" obligaba a unir dos filas
+ * separadas por el menu de acciones.
+ */
 export function FilaGrupo({
   cartera_id,
   grupo_id,
   nombre,
   orden,
-  children,
+  total,
+  cantidadSobres,
 }: {
   cartera_id: number
   grupo_id: number
   nombre: string
   orden: number
-  /** Los sobres del grupo. Vacio hoy; `050-sobres` lo llena. */
-  children?: React.ReactNode
+  /** El total del grupo, ya formateado por la pagina. */
+  total: string
+  /** Cuantos sobres contiene, para el contador. */
+  cantidadSobres: number
 }) {
-  const [plegado, setPlegado] = useState(false)
   const [estado, renombrar] = useActionState(
     (prev: ResultadoDeGrupo, datos: FormData) =>
       accionRenombrarGrupo(cartera_id, grupo_id, prev, datos),
@@ -86,69 +100,104 @@ export function FilaGrupo({
     INICIAL,
   )
 
-  return (
-    <li className={detalle.item}>
-      <div className={detalle.itemEncabezado}>
-        <div>
-          <p className={detalle.itemNombre}>{nombre}</p>
-          <p className={detalle.itemDetalle}>posicion {orden}</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setPlegado((antes) => !antes)}
-          aria-expanded={!plegado}
-          className={detalle.pliegue}
-        >
-          {plegado ? 'Desplegar' : 'Plegar'}
-        </button>
+  /*
+ * El root es un `<div>` y no un `<li>`: la pagina lo envuelve en el `<li>` de la lista de
+ * grupos, porque al lado de esta tarjeta van el contador y el desplegable de sobres, que R35
+ * exige que sigan visibles al plegar. Si esta devolviera un `<li>`, el HTML seria un `<li>`
+ * dentro de otro `<li>` —nesting invalido— y el navegador lo reestructuraria al parsear, con
+ * lo que la hidratacion falla.
+ *
+ * El pliegue no vive aca sino en el `<details>` que la pagina pone al lado del contador: R35
+ * pide que plegar esconda los sobres y deje el total, y un estado de React metido en la
+ * tarjeta no puede cumplir las dos cosas a la vez porque el contador esta fuera de ella. Por
+ * eso esta tarjeta no tiene boton de plegar —antes lo tenia y no ocultaba nada: la pagina nunca
+ * le pasa `children`, asi que solo alternaba el texto de "no hay sobres" en grupos que si los
+ * tienen.
+ *
+ * La fila es de lectura y por lo tanto **no** lleva el recuadro de `.item`: un grupo es una
+ * cabecera de seccion, y dibujarlo con la misma caja que sus hijos —los sobres— lo hacia
+ * parecer un sobre mas. El total va a la derecha en la tipografia de cifras del sistema para
+ * que los totales de todos los grupos se alineen en columna.
+ */
+return (
+    <div className={detalle.filaGrupo}>
+      <div className={detalle.grupoTexto}>
+        <p className={detalle.itemNombre}>{nombre}</p>
+        <p className={detalle.itemDetalle}>
+          {cantidadSobres} {cantidadSobres === 1 ? 'sobre' : 'sobres'}
+        </p>
       </div>
 
-      {estado.error ? <Aviso tono="error">{estado.error}</Aviso> : null}
-      {estadoOrden.error ? <Aviso tono="error">{estadoOrden.error}</Aviso> : null}
-      {estadoArchivo.error ? <Aviso tono="error">{estadoArchivo.error}</Aviso> : null}
-      {estado.aviso ? <Aviso tono="exito">{estado.aviso}</Aviso> : null}
+      <p className={detalle.grupoTotal}>{total}</p>
 
-      {plegado ? null : (
-        <div className={detalle.formularioCercano}>
-          {children ?? (
-            <p className={detalle.itemDetalle}>
-              Todavia no hay sobres en este grupo.
-            </p>
-          )}
-        </div>
-      )}
-
-      <details className={detalle.desplegable}>
-        <summary className={detalle.resumen}>Editar grupo</summary>
-
-        <form action={renombrar} className={detalle.formularioCercano}>
-          <div className={detalle.crece}>
-            <Campo nombre="nombre" etiqueta="Nuevo nombre" error={estado.campos?.nombre} />
-          </div>
-          <AccionPendiente>Renombrar</AccionPendiente>
-        </form>
-
-        <form action={reordenar} className={detalle.formularioCercano}>
-          <div className={detalle.crece}>
-            <Campo
-              nombre="orden"
-              etiqueta="Posicion"
-              error={estadoOrden.campos?.orden}
-              ayuda="Un entero igual o mayor que cero."
-            />
-          </div>
-          <AccionPendiente>Mover</AccionPendiente>
-        </form>
-
-        <form action={archivar} className={detalle.formularioCercano}>
-          <AccionPendiente>Archivar grupo</AccionPendiente>
-        </form>
-        <p className={detalle.nota}>
-          Archivar un grupo no borra sus sobres ni cambia sus disponibles: solo deja de
-          aparecer en el agrupamiento.
-        </p>
-      </details>
-    </li>
+      <MenuDeFila
+        titulo={`Acciones de ${nombre}`}
+        acciones={[
+          {
+            etiqueta: 'Renombrar',
+            contenido: (
+              <>
+                {estado.error ? <Aviso tono="error">{estado.error}</Aviso> : null}
+                {estado.aviso ? <Aviso tono="exito">{estado.aviso}</Aviso> : null}
+                <form action={renombrar} className={detalle.formularioCercano}>
+                  <div className={detalle.crece}>
+                    <Campo nombre="nombre" etiqueta="Nuevo nombre" error={estado.campos?.nombre} />
+                  </div>
+                  <AccionPendiente>Renombrar</AccionPendiente>
+                </form>
+              </>
+            ),
+          },
+          {
+            etiqueta: 'Mover de posicion',
+            contenido: (
+              <>
+                {estadoOrden.error ? <Aviso tono="error">{estadoOrden.error}</Aviso> : null}
+                {estadoOrden.aviso ? <Aviso tono="exito">{estadoOrden.aviso}</Aviso> : null}
+                <form action={reordenar} className={detalle.formularioCercano}>
+                  <div className={detalle.crece}>
+                    <Campo
+                      nombre="orden"
+                      etiqueta="Posicion"
+                      error={estadoOrden.campos?.orden}
+                      ayuda="Un entero igual o mayor que cero."
+                    />
+                  </div>
+                  <AccionPendiente>Mover</AccionPendiente>
+                </form>
+              </>
+            ),
+          },
+          {
+            etiqueta: 'Archivar grupo',
+            peligro: true,
+            contenido: (
+              <>
+                {estadoArchivo.error ? (
+                  <Aviso tono="error">{estadoArchivo.error}</Aviso>
+                ) : null}
+                {estadoArchivo.aviso ? (
+                  <Aviso tono="exito">{estadoArchivo.aviso}</Aviso>
+                ) : null}
+                <Confirmar
+                  titulo="Archivar este grupo"
+                  childrenAcciones={
+                    <form action={archivar}>
+                      <AccionPendiente>Archivar grupo</AccionPendiente>
+                    </form>
+                  }
+                >
+                  <p>
+                    No borra sus sobres ni cambia sus disponibles: solo deja de aparecer en el
+                    agrupamiento. Se puede restaurar cuando quieras.
+                  </p>
+                </Confirmar>
+              </>
+            ),
+          },
+        ]}
+      />
+    </div>
   )
 }
 

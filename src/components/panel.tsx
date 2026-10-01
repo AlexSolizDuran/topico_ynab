@@ -1,6 +1,6 @@
 ﻿'use client'
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { formatear } from '../dinero'
 import type { DatosPanel } from '../repos/panel'
@@ -17,6 +17,15 @@ export interface PropsPanelResumen {
   datos: DatosPanel
   carterasDisponibles?: CarteraOpcion[]
   avisoRecalculo?: boolean
+  /**
+   * Lo que va debajo del resumen: los tres paneles de operacion, a ancho completo.
+   *
+   * Va por `children` y no como otro prop con contenido porque el resumen no sabe nada de
+   * ellos: el resumen **muestra** cifras y el area de operacion **escribe** datos. Que el
+   * resumen no dependa de la operacion es justo lo que hace que este archivo siga siendo una
+   * vista de lectura, y por eso el prop es opcional y no importa ningun repositorio.
+   */
+  children?: ReactNode
 }
 
 /**
@@ -26,13 +35,19 @@ export interface PropsPanelResumen {
  * - Vista de SOLO LECTURA sin formularios de captura directa
  * - Desglose de patrimonio derivado
  * - Dinero suelto y aviso de sobreasignación
- * - Cuentas con crédito en rojo y archivadas separadas
- * - Sobres agrupados con pliegue y desbordes priorizados
  * - Cobertura manual de desborde cuando hay dinero suelto suficiente
  * - Gastos e ingresos del periodo (sin traspasos)
  * - Conteo y acceso a movimientos sin asignar
  * - Avance de metas activas con destaque de retrasadas
  * - Aislamiento por cartera y sin totales combinados
+ *
+ * **El resumen NO lista cuentas ni sobres.** Antes lo hacia, en dos columnas al lado de los
+ * grupos, y eran una segunda copia de lo que ya esta abajo en `PanelOperaciones`: los mismos
+ * saldos y los mismos disponibles, en una fila mas delgada y sin ninguna accion. Duplicar el
+ * listado no aportaba informacion y si garantias: dos lugares donde leer un saldo y donde
+ * clickear, y el que no tiene el menu "⋯" se lee como si no se pudiera hacer nada con el.
+ * El resumen queda con lo que **solo** el resumen puede mostrar —las cifras agregadas y el
+ * avance de las metas— y los listados, con sus acciones, quedan en su unico lugar.
  *
  * El formato vive en `panel.module.css`. Este archivo decide que se muestra y con que regla
  * de negocio; el color y el espaciado, alla.
@@ -41,29 +56,37 @@ export function PanelResumen({
   datos,
   carterasDisponibles = [],
   avisoRecalculo = false,
+  children,
 }: PropsPanelResumen) {
   const {
     cartera,
     periodo,
     patrimonio,
     dinero_suelto,
-    cuentas,
-    grupos,
     totales_periodo,
     pendientes_asignacion,
     metas_activas,
+    desbordes_acciones,
   } = datos
   const moneda = cartera.moneda
 
   const [desglosePatrimonioAbierto, setDesglosePatrimonioAbierto] = useState(false)
-  const [archivadasAbiertas, setArchivadasAbiertas] = useState(false)
-  const [gruposColapsados, setGruposColapsados] = useState<Record<number, boolean>>({})
 
-  const toggleGrupo = (id: number) => {
-    setGruposColapsados((prev) => ({ ...prev, [id]: !prev[id] }))
-  }
-
-  const rutaCartera = `/cartera/${cartera.id}`
+  /*
+ * Los enlaces del resumen apuntan a la **misma** pagina, a un ancla.
+ *
+ * Antes iban a `/cartera/<id>`, una ruta que ya no existe: la operacion se hizo esta pagina y
+ * sus tres paneles viven aca abajo. Un enlace que sube a un ancla es mejor que uno que salta
+ * a otra ruta y obliga a volver, y de paso R12 se cumple sola —el resumen **ofrece el acceso**
+ * a las capacidades, no las ejecuta.
+ *
+ * Los enlaces de accion llevan `cartera=` porque el panel es de una cartera abierta: sin eso,
+ * un enlace de "tapar" abriria el modal del sobre en la cartera que se esta viendo, que es la
+ * correcta, pero si el usuario cambia de cartera desde el selector el ancla tendria que viajar
+ * con ella.
+ */
+const anclaSobres = `/panel?cartera=${cartera.id}#sobres`
+const anclaMovimientos = `/panel?cartera=${cartera.id}#movimientos`
 
   return (
     <main className={`${estilos.panel} ${tema.oscuro}`}>
@@ -248,7 +271,7 @@ export function PanelResumen({
               </span>
               {pendientes_asignacion.cantidad > 0 ? (
                 <Link
-                  href={`${rutaCartera}?filtro=sin_sobre`}
+                  href={`${anclaMovimientos}&solo=sin_sobre`}
                   className={`${estilos.boton} ${estilos.botonAmbar} mt-2`}
                 >
                   Asignar
@@ -264,7 +287,7 @@ export function PanelResumen({
             <div className={estilos.seccion}>
               <h2 className={estilos.titulo}>Desbordes detectados</h2>
               <Link
-                href={`${rutaCartera}?accion=asignar`}
+                href={`${anclaSobres}`}
                 className={`${estilos.boton} ${estilos.botonLima}`}
               >
                 Asignar dinero
@@ -282,7 +305,7 @@ export function PanelResumen({
 
                 {desborde.puede_tapar ? (
                   <Link
-                    href={`${rutaCartera}?tapar_sobre=${desborde.sobre_id}&origen=suelto`}
+                    href={`${anclaSobres}&modal=tapar&sobre=${desborde.sobre_id}&origen=suelto`}
                     className={`${estilos.boton} ${estilos.botonAmbar}`}
                   >
                     Tapar desborde con dinero suelto
@@ -298,224 +321,80 @@ export function PanelResumen({
         ) : null}
 
         {/*
-          Cuentas y sobres van en dos columnas en pantalla ancha. Antes eran la misma
-          disposicion, pero cada bloque con su propia tarjeta y su propio encabezado pesado;
-          aca comparten el mismo paso de separacion y el titulo va en versalitas de 11px.
+          Las metas activas quedan en el resumen porque son una lectura agregada que no esta
+          en ningun otro lado: el panel de operaciones lista sobres, y una meta es un
+          **objetivo sobre** un sobre, no un sobre. Se muestran solo mientras haya alguna.
         */}
-        <div className={estilos.columnas}>
-          {/* BLOQUE 3: Cuentas */}
-          <section aria-label="Cuentas" className={estilos.tarjeta}>
+        {metas_activas.length > 0 ? (
+          <section aria-label="Metas activas" className={estilos.tarjeta}>
             <div className={estilos.seccion}>
-              <h2 className={estilos.titulo}>Cuentas</h2>
-              <Link href={rutaCartera} className={estilos.enlaceSuave}>
-                Ver todas
+              <h2 className={estilos.titulo}>Progreso de metas activas</h2>
+              <Link href={anclaSobres} className={estilos.enlaceSuave}>
+                Ver sobres
               </Link>
             </div>
 
             <div className={estilos.filas}>
-              {cuentas.activas.map((c) => {
-                const esDeuda = c.tipo === 'credito' || c.saldo.startsWith('-')
-
-                return (
-                  <div key={c.id} className={estilos.fila}>
-                    <span className={estilos.filaNombre}>
-                      <span>{c.nombre}</span>
-                      <span className={estilos.tipo}>{c.tipo}</span>
-                    </span>
-                    <span
-                      className={`${estilos.filaValor} ${esDeuda ? estilos.riesgo : ''}`}
-                    >
-                      {formatear(c.saldo, moneda)}
-                    </span>
-                  </div>
-                )
-              })}
-
-              <div className={`${estilos.fila} ${estilos.filaTotal}`}>
-                <span className={estilos.filaNombre}>
-                  <span>Total cuentas activas</span>
-                </span>
-                <span className={estilos.filaValor}>
-                  {formatear(cuentas.total_activas, moneda)}
-                </span>
-              </div>
-            </div>
-
-            {cuentas.archivadas.length > 0 ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setArchivadasAbiertas((v) => !v)}
-                  aria-expanded={archivadasAbiertas}
-                  className={estilos.desglose}
-                >
-                  Cuentas archivadas ({cuentas.archivadas.length})
-                  <span aria-hidden="true" className={estilos.caret}>
-                    {' '}
-                    {archivadasAbiertas ? '▲' : '▼'}
-                  </span>
-                </button>
-
-                {archivadasAbiertas ? (
-                  <div className={estilos.filas}>
-                    {cuentas.archivadas.map((c) => (
-                      <div key={c.id} className={estilos.fila}>
-                        <span className={estilos.filaNombre}>
-                          <span>{c.nombre}</span>
-                          <span className={estilos.tipo}>archivada</span>
-                        </span>
-                        <span className={estilos.filaValor}>
-                          {formatear(c.saldo, moneda)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-              </>
-            ) : null}
-          </section>
-
-          {/* BLOQUE 4: Sobres agrupados por grupo */}
-          <section aria-label="Sobres presupuestarios" className={estilos.tarjeta}>
-            <div className={estilos.seccion}>
-              <h2 className={estilos.titulo}>Sobres</h2>
-              <Link href={rutaCartera} className={estilos.enlaceSuave}>
-                Ver todos
-              </Link>
-            </div>
-
-            {/* Metas activas. La etiqueta de estado y la barra van en la misma linea. */}
-            {metas_activas.length > 0 ? (
-              <>
-                {/*
-                  Subtitulo y no otra tarjeta: las metas comparten seccion con los sobres y
-                  abrirlas aparte las separaria de la cartera a la que apuntan. El filete de
-                  arriba las distingue sin sumar un borde mas.
-                */}
-                <h3 className={estilos.subtitulo}>Progreso de metas activas</h3>
-                <div className={estilos.filas}>
-                {metas_activas.map((meta) => (
-                  <div key={meta.id} className={estilos.meta}>
-                    <div className={estilos.metaCuerpo}>
-                      <div className={estilos.sobreLinea}>
-                        <span className={estilos.grupoNombre}>{meta.nombre_sobre}</span>
-                        <span
-                          className={`${estilos.etiquetaMeta} ${
-                            meta.retrasada
-                              ? estilos.etiquetaRetrasada
-                              : meta.estado_visual === 'cumplida'
-                                ? estilos.etiquetaCumplida
-                                : estilos.etiquetaCamino
-                          }`}
-                        >
-                          {meta.retrasada
-                            ? 'Retrasada'
+              {metas_activas.map((meta) => (
+                <div key={meta.id} className={estilos.meta}>
+                  <div className={estilos.metaCuerpo}>
+                    <div className={estilos.sobreLinea}>
+                      <span className={estilos.grupoNombre}>{meta.nombre_sobre}</span>
+                      <span
+                        className={`${estilos.etiquetaMeta} ${
+                          meta.retrasada
+                            ? estilos.etiquetaRetrasada
                             : meta.estado_visual === 'cumplida'
-                              ? 'Cumplida'
-                              : 'En camino'}
-                        </span>
-                      </div>
-
-                      <div className={estilos.sobreLinea}>
-                        <span className={estilos.tipo}>
-                          {formatear(meta.disponible, moneda)} de{' '}
-                          {formatear(meta.monto_objetivo, moneda)}
-                        </span>
-                        <span className={estilos.conteo}>{meta.porcentaje}%</span>
-                      </div>
-
-                      <div className={estilos.pista}>
-                        <div
-                          className={estilos.pistaRelleno}
-                          style={{ width: `${Math.min(meta.porcentaje, 100)}%` }}
-                        />
-                      </div>
-
-                      {meta.retrasada && meta.falta_para_ritmo ? (
-                        <p className={`${estilos.tipo} mt-1`}>
-                          Faltan {formatear(meta.falta_para_ritmo, moneda)} para alcanzar el
-                          ritmo necesario este mes.
-                        </p>
-                      ) : null}
+                              ? estilos.etiquetaCumplida
+                              : estilos.etiquetaCamino
+                        }`}
+                      >
+                        {meta.retrasada
+                          ? 'Retrasada'
+                          : meta.estado_visual === 'cumplida'
+                            ? 'Cumplida'
+                            : 'En camino'}
+                      </span>
                     </div>
-                  </div>
-                ))}
-                </div>
-              </>
-            ) : null}
 
-            {/* Lista de grupos, plegable */}
-            <div>
-              {grupos.map((grupo) => {
-                const colapsado = gruposColapsados[grupo.id] ?? false
-
-                return (
-                  <div key={grupo.id} className={estilos.grupo}>
-                    <button
-                      type="button"
-                      onClick={() => toggleGrupo(grupo.id)}
-                      aria-expanded={!colapsado}
-                      className={estilos.grupoCabecera}
-                    >
-                      <span className={estilos.grupoIzquierda}>
-                        <span
-                          aria-hidden="true"
-                          className={`${estilos.caret} ${colapsado ? '' : estilos.caretAbierto}`}
-                        >
-                          ▶
-                        </span>
-                        <span className={estilos.grupoNombre}>{grupo.nombre}</span>
-                        <span className={estilos.conteo}>({grupo.sobres.length})</span>
+                    <div className={estilos.sobreLinea}>
+                      <span className={estilos.tipo}>
+                        {formatear(meta.disponible, moneda)} de{' '}
+                        {formatear(meta.monto_objetivo, moneda)}
                       </span>
+                      <span className={estilos.conteo}>{meta.porcentaje}%</span>
+                    </div>
 
-                      <span className={estilos.filaValor}>
-                        {formatear(grupo.total_disponible, moneda)}
-                      </span>
-                    </button>
+                    <div className={estilos.pista}>
+                      <div
+                        className={estilos.pistaRelleno}
+                        style={{ width: `${Math.min(meta.porcentaje, 100)}%` }}
+                      />
+                    </div>
 
-                    {!colapsado ? (
-                      <div>
-                        {grupo.sobres.map((sobre) => (
-                          <div key={sobre.id} className={estilos.sobre}>
-                            <div className={estilos.sobreCuerpo}>
-                              <div className={estilos.sobreLinea}>
-                                <span
-                                  className={
-                                    sobre.es_negativo ? estilos.riesgo : estilos.filaNombre
-                                  }
-                                >
-                                  {sobre.nombre}
-                                </span>
-
-                                {sobre.es_negativo ? (
-                                  <span className={estilos.etiquetaRiesgo}>
-                                    En rojo
-                                  </span>
-                                ) : null}
-                              </div>
-
-                              {sobre.es_negativo && sobre.desborde ? (
-                                <p className={estilos.tipo}>
-                                  Desborde {formatear(sobre.desborde, moneda)}
-                                </p>
-                              ) : null}
-                            </div>
-
-                            <span
-                              className={`${estilos.filaValor} ${sobre.es_negativo ? estilos.riesgo : estilos.ingreso}`}
-                            >
-                              {formatear(sobre.disponible, moneda)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
+                    {meta.retrasada && meta.falta_para_ritmo ? (
+                      <p className={`${estilos.tipo} mt-1`}>
+                        Faltan {formatear(meta.falta_para_ritmo, moneda)} para alcanzar el
+                        ritmo necesario este mes.
+                      </p>
                     ) : null}
                   </div>
-                )
-              })}
+                </div>
+              ))}
             </div>
           </section>
-        </div>
+        ) : null}
+
+        {/*
+          Los tres paneles de operacion van **debajo y a ancho completo**.
+
+          Antes iban dentro de un grid de dos columnas junto con las listas de solo lectura
+          del resumen, asi que quedaban en una mitad de pantalla y se comprimian para que la
+          otra mitad mostrara lo mismo. Sin esas listas no hay nada que comparar al lado: cada
+          panel es una fila de la lista completa —con sus nombres, sus importes y su menu de
+          acciones— y necesita el ancho entero para leerse.
+        */}
+        {children}
       </div>
     </main>
   )

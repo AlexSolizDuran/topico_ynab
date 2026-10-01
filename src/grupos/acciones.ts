@@ -66,7 +66,7 @@ export async function accionCrearGrupo(
     return aResultado(error)
   }
 
-  revalidatePath(`/cartera/${cartera_id}`)
+  revalidatePath('/panel')
   return { ok: true, aviso: `El grupo "${nombre}" quedo creado.` }
 }
 
@@ -86,7 +86,7 @@ export async function accionRenombrarGrupo(
     return aResultado(error)
   }
 
-  revalidatePath(`/cartera/${cartera_id}`)
+  revalidatePath('/panel')
   return { ok: true, aviso: 'El nombre del grupo cambio.' }
 }
 
@@ -106,7 +106,7 @@ export async function accionReordenarGrupo(
     return aResultado(error)
   }
 
-  revalidatePath(`/cartera/${cartera_id}`)
+  revalidatePath('/panel')
   return { ok: true, aviso: 'El grupo cambio de lugar. Sus totales no se movieron.' }
 }
 
@@ -125,7 +125,7 @@ export async function accionArchivarGrupo(
     return aResultado(error)
   }
 
-  revalidatePath(`/cartera/${cartera_id}`)
+  revalidatePath('/panel')
   // El aviso dice lo que el requerimiento exige: archivar un grupo no toca sus sobres.
   return { ok: true, aviso: 'El grupo quedo archivado. Sus sobres siguen intactos.' }
 }
@@ -145,6 +145,6 @@ export async function accionRestaurarGrupo(
     return aResultado(error)
   }
 
-  revalidatePath(`/cartera/${cartera_id}`)
+  revalidatePath('/panel')
   return { ok: true, aviso: 'El grupo volvio al agrupamiento.' }
 }

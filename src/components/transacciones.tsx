@@ -29,6 +29,7 @@ import {
   type ResultadoDeMovimiento,
 } from '../transacciones/acciones'
 import { formatear, paraCampo } from '../dinero'
+import { aCentimos, deCentimos } from '../patrimonio/calculos'
 import {
   FilaEditarTraspaso,
   RecorridoDeTraspaso,
@@ -41,6 +42,7 @@ import {
   type OpcionVista,
   Selector,
 } from './sesion'
+import { Confirmar, MenuDeFila } from './modal'
 import detalle from './detalle.module.css'
 
 /** Una cuenta o un sobre, tal como los elige el usuario. */
@@ -109,14 +111,30 @@ function AccionPendiente({ children }: { children: React.ReactNode }) {
   return <Boton pendiente={pending}>{children}</Boton>
 }
 
-/**
+/*
  * El resultado de una accion, con el aviso retroactivo al lado.
  *
  * Las dos mitades van juntas: si la operacion se hizo, el `aviso` dice que paso y el aviso
  * retroactivo de R7 agrega el matiz de que tambien se movio un mes anterior. En un error solo
  * hay mensaje: `periodo_afectado` no viaja en ese caso, asi que no necesita guarda propia.
+ *
+ * El enlace a comparativos es la otra mitad de R3. Editar, dar de alta o borrar un movimiento
+ * de un periodo ya comparado cambia sus totales, y el aviso de arriba solo mira el mes que se
+ * esta viendo. Este enlace lleva al usuario a la comparacion con `recalculado=1`, que es lo
+ * que hace que `/comparativos` diga que las cifras cambiaron —el aviso vive en la pagina que
+ * muestra las cifras, no en la que se edito—.
+ *
+ * Es un enlace y no un boton: no cambia datos, es la manera de ir a mirar el efecto.
  */
-function Resultado({ estado, periodo }: { estado: ResultadoDeMovimiento; periodo: string }) {
+function Resultado({
+  estado,
+  periodo,
+  cartera_id,
+}: {
+  estado: ResultadoDeMovimiento
+  periodo: string
+  cartera_id: number
+}) {
   if (estado.error) {
     return <Aviso tono="error">{estado.error}</Aviso>
   }
@@ -124,6 +142,16 @@ function Resultado({ estado, periodo }: { estado: ResultadoDeMovimiento; periodo
     <div className={detalle.bloque}>
       {estado.aviso ? <Aviso tono="exito">{estado.aviso}</Aviso> : null}
       <AvisoRetroactivo periodoAfectado={estado.periodo_afectado} periodoActual={periodo} />
+      {estado.periodo_afectado ? (
+        <p className={detalle.nota}>
+          <a
+            href={`/comparativos?cartera=${cartera_id}&mes=${estado.periodo_afectado}&recalculado=1`}
+            className={detalle.enlaceSuave}
+          >
+            Ver la comparación recalculada
+          </a>
+        </p>
+      ) : null}
     </div>
   )
 }
@@ -139,13 +167,15 @@ function Resultado({ estado, periodo }: { estado: ResultadoDeMovimiento; periodo
 function Campos({
   estado,
   periodo,
+  cartera_id,
 }: {
   estado: ResultadoDeMovimiento
   periodo: string
+  cartera_id: number
 }) {
   return (
     <>
-      <Resultado estado={estado} periodo={periodo} />
+      <Resultado estado={estado} periodo={periodo} cartera_id={cartera_id} />
       {estado.campos && !estado.error ? (
         <p className={detalle.nota}>
           Revisá los campos marcados e intentá de nuevo.
@@ -189,7 +219,7 @@ export function FormularioNuevoMovimiento({
 
   return (
     <form action={enviar} className={detalle.formulario}>
-      <Campos estado={estado} periodo={periodo} />
+      <Campos estado={estado} periodo={periodo} cartera_id={cartera_id} />
       <div className={detalle.grillaDos}>
         <Selector
           opciones={cuentas}
@@ -260,7 +290,7 @@ export function FilaEditarMovimiento({
 
   return (
     <form action={enviar} className={`${detalle.formulario} ${detalle.formularioAnidado}`}>
-      <Campos estado={estado} periodo={periodo} />
+      <Campos estado={estado} periodo={periodo} cartera_id={cartera_id} />
       <div className={detalle.grillaDos}>
         <Selector
           opciones={cuentas}
@@ -326,6 +356,13 @@ export function FilaEditarMovimiento({
  * Aqui **no** hay boton de restaurar. Esta lista es la de los que cuentan, y restaurar solo
  * tiene sentido sobre una fila que ya no contaba: el boton vive en
  * `FilaMovimientoEliminada`, que es la unica que puede ofrecerlo sin contradecirse.
+ */
+/*
+ * Corregir, asignar o quitar el sobre, y borrar: las cuatro acciones de una fila.
+ *
+ * Las cuatro van en el modal del "⋯" y la fila queda en lectura: descripcion, recorrido,
+ * monto y los pills. El pill de "sin asignar" sigue siendo la senal de que falta algo, y
+ * por eso la accion aparece sola en el menu cuando el movimiento esta pendiente.
  */
 export function FilaMovimiento({
   cartera_id,
@@ -403,97 +440,142 @@ export function FilaMovimiento({
         {movimiento.pata ? <span className={`${detalle.pill} ${detalle.pillTraspaso}`}>pata de un traspaso</span> : null}
       </div>
 
-      <div className={detalle.acciones}>
-        {/*
-          Las dos ramas van al mismo `<details>` con el mismo `<summary>` y cambian **solo** el
-          formulario de adentro. Antes de `070` D5 no habia rama de pata: una pata no se
-          corrigia, porque `editarMovimiento` la rechazaba. Ahora se corrige en espejo, asi que
-          el formulario es el de traspasos, y por eso el aviso de que se mueven las dos patas va
-          ahi y no en un `onClick` de este boton.
-        */}
-        <details open={abierta} className={detalle.crece}>
-          <summary className={detalle.resumen}>
-            {movimiento.pata ? 'Corregir el traspaso' : 'Corregir'}
-          </summary>
-          {movimiento.pata ? (
-            <FilaEditarTraspaso
-              cartera_id={cartera_id}
-              movimiento={movimiento}
-              cuentas={cuentas}
-              periodo={periodo}
-            />
-          ) : (
-            <FilaEditarMovimiento
-              cartera_id={cartera_id}
-              movimiento={movimiento}
-              cuentas={cuentas}
-              sobres={sobres}
-              periodo={periodo}
-            />
-          )}
-        </details>
+      {/*
+        Las dos ramas van al mismo modal con la misma etiqueta y cambian **solo** el formulario
+        de adentro. Antes de `070` D5 no habia rama de pata: una pata no se corregia, porque
+        `editarMovimiento` la rechazaba. Ahora se corrige en espejo, asi que el formulario es
+        el de traspasos, y por eso el aviso de que se mueven las dos patas va ahi y no en un
+        `onClick` de este boton.
+      */}
+      <MenuDeFila
+        titulo={`Acciones de ${movimiento.descripcion || ETIQUETA_TIPO[movimiento.tipo]}`}
+        acciones={[
+          {
+            etiqueta: movimiento.pata ? 'Corregir el traspaso' : 'Corregir',
+            contenido: movimiento.pata ? (
+              <FilaEditarTraspaso
+                cartera_id={cartera_id}
+                movimiento={movimiento}
+                cuentas={cuentas}
+                periodo={periodo}
+              />
+            ) : (
+              <FilaEditarMovimiento
+                cartera_id={cartera_id}
+                movimiento={movimiento}
+                cuentas={cuentas}
+                sobres={sobres}
+                periodo={periodo}
+              />
+            ),
+          },
+          ...(!movimiento.pata && (movimiento.pendiente || movimiento.sobre_id === null)
+            ? [
+                {
+                  /*
+                    Asignar sobre se ofrece cuando no tiene sobre y **no** es una pata.
+                    `sobre_id === null` solo, sin el `!pata`, alcanzaria tambien a las patas de
+                    un traspaso —que tampoco tienen sobre— y llevaria al usuario a un
+                    `TraspasoNoAsignable` que el formulario no podia prever. El `!pata` va
+                    primero y por eso: el repositorio rechaza asignar a una pata, sin excepcion.
+                  */
+                  etiqueta: 'Asignar sobre',
+                  contenido: (
+                    <>
+                      {estadoAsignar.error ? (
+                        <Aviso tono="error">{estadoAsignar.error}</Aviso>
+                      ) : null}
+                      {estadoAsignar.aviso ? (
+                        <Aviso tono="exito">{estadoAsignar.aviso}</Aviso>
+                      ) : null}
+                      <form action={asignar} className={detalle.formularioEnLinea}>
+                        <Selector
+                          opciones={sobres}
+                          nombre="sobre_id"
+                          etiqueta="Asignar a"
+                          vacio="Elegi un sobre"
+                          error={estadoAsignar.campos?.sobre_id}
+                        />
+                        <AccionPendiente>Asignar sobre</AccionPendiente>
+                      </form>
+                    </>
+                  ),
+                },
+              ]
+            : []),
+          ...(movimiento.sobre_id !== null
+            ? [
+                {
+                  /*
+                    Quitar el sobre es el mismo `accionAsignarSobre` con el campo vacio. Mandar
+                    un `sobre_id` vacio es lo que el repositorio lee como "quitar", y asi no
+                    hace falta una accion aparte que solo se diferencie en un parametro.
+                  */
+                  etiqueta: 'Quitar sobre',
+                  contenido: (
+                    <>
+                      {estadoAsignar.error ? (
+                        <Aviso tono="error">{estadoAsignar.error}</Aviso>
+                      ) : null}
+                      {estadoAsignar.aviso ? (
+                        <Aviso tono="exito">{estadoAsignar.aviso}</Aviso>
+                      ) : null}
+                      <form action={asignar}>
+                        <input type="hidden" name="sobre_id" value="" />
+                        <AccionPendiente>Quitar sobre</AccionPendiente>
+                      </form>
+                    </>
+                  ),
+                },
+              ]
+            : []),
+          {
+            /*
+              El borrado aparece **siempre**, patas incluidas: R6 dice que borrar una pata
+              borra las dos, asi que la accion existe y el boton lo dice. Lo que no existe para
+              una pata es la edicion, y por eso arriba la primera etiqueta cambia.
 
-        {estadoBorrar.error || estadoAsignar.error ? (
-          <p role="alert" className={detalle.errorLinea}>
-            {estadoBorrar.error ?? estadoAsignar.error}
-          </p>
-        ) : null}
-        {estadoBorrar.aviso ? (
-          <p role="status" className={detalle.exitoLinea}>
-            {estadoBorrar.aviso}
-          </p>
-        ) : null}
-        {estadoAsignar.aviso ? (
-          <p role="status" className={detalle.exitoLinea}>
-            {estadoAsignar.aviso}
-          </p>
-        ) : null}
-      </div>
-
-      <div className={detalle.formularioEnLinea}>
-        {/*
-          Asignar sobre se ofrece cuando no tiene sobre y **no** es una pata.
-          `sobre_id === null` solo, sin el `!pata`, alcanzaria tambien a las patas de un
-          traspaso —que tampoco tienen sobre— y el boton llevaria al usuario a un
-          `TraspasoNoAsignable` que el formulario no podia prever. El `!pata` va primero y
-          por eso: el repository rechaza asignar a una pata, no hay excepcion.
-        */}
-        {!movimiento.pata && (movimiento.pendiente || movimiento.sobre_id === null) ? (
-          <form action={asignar} className={detalle.formularioEnLinea}>
-            <Selector
-              opciones={sobres}
-              nombre="sobre_id"
-              etiqueta="Asignar a"
-              vacio="Elegi un sobre"
-              error={estadoAsignar.campos?.sobre_id}
-            />
-            <AccionPendiente>Asignar sobre</AccionPendiente>
-          </form>
-        ) : null}
-
-        {movimiento.sobre_id !== null ? (
-          <form action={asignar}>
-            {/*
-              Quitar el sobre es el mismo `accionAsignarSobre` con el campo vacio. Mandar un
-              `sobre_id` vacio es lo que el repositorio lee como "quitar", y asi no hace
-              falta una accion aparte que solo se diferencie en un parametro.
-            */}
-            <input type="hidden" name="sobre_id" value="" />
-            <AccionPendiente>Quitar sobre</AccionPendiente>
-          </form>
-        ) : null}
-
-        {/*
-          El boton de borrar aparece **siempre**, patas incluidas: R6 dice que borrar una
-          pata borra las dos, asi que la accion existe y el boton lo dice. Lo que no existe
-          para una pata es la edicion, y por eso arriba el `<details>` va solo si no es pata.
-        */}
-        <form action={borrar}>
-          <AccionPendiente>
-            {movimiento.pata ? 'Borrar las dos patas' : 'Borrar'}
-          </AccionPendiente>
-        </form>
-      </div>
+              El aviso nombra las dos consecuencias porque son distintas: una es logica y la otra
+              es en cascada. Decir solo "se puede restaurar" dejaria al usuario sin notar que
+              con una pata se lleva su contraparte.
+            */
+            etiqueta: movimiento.pata ? 'Borrar las dos patas' : 'Borrar',
+            peligro: true,
+            contenido: (
+              <>
+                {estadoBorrar.error ? <Aviso tono="error">{estadoBorrar.error}</Aviso> : null}
+                {estadoBorrar.aviso ? <Aviso tono="exito">{estadoBorrar.aviso}</Aviso> : null}
+                <Confirmar
+                  titulo={
+                    movimiento.pata ? 'Borrar las dos patas del traspaso' : 'Borrar el movimiento'
+                  }
+                  childrenAcciones={
+                    <form action={borrar}>
+                      <AccionPendiente>
+                        {movimiento.pata ? 'Borrar las dos patas' : 'Borrar'}
+                      </AccionPendiente>
+                    </form>
+                  }
+                >
+                  {movimiento.pata ? (
+                    <p>
+                      Este movimiento es una pata de un traspaso, asi que se van las dos: la de
+                      origen y la de destino. El saldo de las dos cuentas se recalcula, y todo
+                      queda disponible para restaurar desde los eliminados.
+                    </p>
+                  ) : (
+                    <p>
+                      El borrado es logico: no borra la fila, la deja de contar en todos los
+                      calculos y recalcula el saldo de la cuenta y los disponibles de los
+                      sobres. Se puede restaurar.
+                    </p>
+                  )}
+                </Confirmar>
+              </>
+            ),
+          },
+        ]}
+      />
     </li>
   )
 }
@@ -698,12 +780,13 @@ export function ListaMovimientos({
         <div className={detalle.formularioCercano}>
           <Boton>Filtrar</Boton>
           {/*
-            Limpiar es un enlace a la cartera sin query, no un boton: limpiar un filtro no es
-            una operacion sobre datos, es volver a la vista sin parametros.
+            Limpiar es un enlace al panel sin query, no un boton: limpiar un filtro no es una
+            operacion sobre datos, es volver a la vista sin parametros. El ancla deja al usuario
+            en el panel de movimientos en vez de reprocesar la pagina entera desde arriba.
           */}
           {hayFiltro ? (
             <a
-              href={`/cartera/${cartera_id}`}
+              href={`/panel?cartera=${cartera_id}#movimientos`}
               className={detalle.enlaceSuave}
             >
               Limpiar
@@ -719,20 +802,159 @@ export function ListaMovimientos({
             : 'Todavía no hay movimientos en esta cartera.'}
         </p>
       ) : (
-        <ul className={detalle.lista}>
-          {movimientos.map((movimiento) => (
-            <FilaMovimiento
-              key={movimiento.id}
-              cartera_id={cartera_id}
-              movimiento={movimiento}
-              cuentas={cuentas}
-              sobres={sobres}
-              moneda={moneda}
-              periodo={periodo}
-            />
-          ))}
-        </ul>
+        <MovimientosPorDia
+          cartera_id={cartera_id}
+          movimientos={movimientos}
+          cuentas={cuentas}
+          sobres={sobres}
+          moneda={moneda}
+          periodo={periodo}
+        />
       )}
     </div>
   )
+}
+
+/**
+ * Los movimientos agrupados por dia, con el total de cada dia.
+ *
+ * Sin agrupar, una cartera con dos meses de historia es una sola lista de ochenta filas y la
+ * pregunta de siempre —"cuanto gaste el martes"— obliga a recorrerla entera. Con el dia como
+ * cabecera y su total al lado, la lista se lee por bloques y el total del dia esta a la vista
+ * sin sumar nada a mano.
+ *
+ * El total se arma en centimos con `aCentimos`, no con `Number`: sumar importes como flotantes
+ * es justo lo que la regla del dinero prohibe. Los movimientos llegan ordenados por fecha
+ * descendente desde el repositorio, asi que los dias ya vienen en orden y solo hace falta
+ * cortar cuando la fecha cambia.
+ *
+ * La cabecera **no** es un filtro: no se puede plegar y no es pulsable. Un dia que se pliega
+ * esconde justo el dato que el agrupado acaba de hacer visible.
+ */
+function MovimientosPorDia({
+  cartera_id,
+  movimientos,
+  cuentas,
+  sobres,
+  moneda,
+  periodo,
+}: {
+  cartera_id: number
+  movimientos: ReadonlyArray<MovimientoEnVista>
+  cuentas: ReadonlyArray<OpcionVista>
+  sobres: ReadonlyArray<OpcionVista>
+  moneda: string
+  periodo: string
+}) {
+  const dias: { fecha: string; delDia: MovimientoEnVista[] }[] = []
+
+  for (const movimiento of movimientos) {
+    const ultimo = dias[dias.length - 1]
+    if (ultimo && ultimo.fecha === movimiento.fecha) {
+      ultimo.delDia.push(movimiento)
+    } else {
+      dias.push({ fecha: movimiento.fecha, delDia: [movimiento] })
+    }
+  }
+
+  return (
+    <div className={detalle.bloqueDias}>
+      {dias.map((dia) => (
+        <section key={dia.fecha} className={detalle.dia}>
+          {/*
+            El total del dia excluye los traspasos, igual que el total gastado del panel:
+            un traspaso mueve dinero de una cuenta a otra y no es gasto ni ingreso. Los
+            traspasos quedan en la lista, contados en el numero, pero no suman.
+          */}
+          <header className={detalle.diaCabecera}>
+            <h4 className={detalle.diaFecha}>{etiquetaDeDia(dia.fecha)}</h4>
+            <span className={detalle.diaConteo}>
+              {dia.delDia.length}{' '}
+              {dia.delDia.length === 1 ? 'movimiento' : 'movimientos'}
+            </span>
+            <span className={detalle.diaTotal}>{totalDelDia(dia.delDia, moneda)}</span>
+          </header>
+
+          <ul className={detalle.lista}>
+            {dia.delDia.map((movimiento) => (
+              <FilaMovimiento
+                key={movimiento.id}
+                cartera_id={cartera_id}
+                movimiento={movimiento}
+                cuentas={cuentas}
+                sobres={sobres}
+                moneda={moneda}
+                periodo={periodo}
+              />
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
+  )
+}
+
+/**
+ * El total de un dia, ya formateado.
+ *
+ * Suma solo los importes con signo —un gasto es negativo y lo baja— y salta los traspasos.
+ * Devuelve cadena vacia cuando el dia no tiene nada que sumar, para que la cabecera no
+ * muestre un `$0.00` al lado de una celda vacia.
+ */
+function totalDelDia(
+  movimientos: ReadonlyArray<MovimientoEnVista>,
+  moneda: string,
+): string {
+  let centimos = 0n
+  for (const movimiento of movimientos) {
+    if (movimiento.tipo === 'traspaso') continue
+    centimos += aCentimos(movimiento.monto)
+  }
+  return centimos === 0n ? '' : formatear(deCentimos(centimos), moneda)
+}
+
+/**
+ * La fecha del dia, como la lee una persona.
+ *
+ * "2026-03-31" es un dato, no un encabezado. El formato largo con el dia de la semana
+ * responde de un vistazo "este mes" o "el mes pasado", que es como el usuario piensa cuando
+ * mira una lista de gastos. La conversion es textual y no usa `Date`: parsear el string a
+ * `Date` y formatearlo devuelve el dia incorrecto en las zonas al oeste de UTC, porque el
+ * string se interpreta a medianoche UTC y el formateo local lo corre un dia para atras.
+ */
+function etiquetaDeDia(fecha: string): string {
+  const diasDeSemana = [
+    'domingo',
+    'lunes',
+    'martes',
+    'miercoles',
+    'jueves',
+    'viernes',
+    'sabado',
+  ]
+  const meses = [
+    'enero',
+    'febrero',
+    'marzo',
+    'abril',
+    'mayo',
+    'junio',
+    'julio',
+    'agosto',
+    'septiembre',
+    'octubre',
+    'noviembre',
+    'diciembre',
+  ]
+
+  const [anio = '', mes = '', dia = ''] = fecha.split('-')
+  if (!anio || !mes || !dia) return fecha
+
+  // `new Date(anio, mes - 1, dia)` con el **anio como numero**: sin el `Number`, el
+  // constructor toma el string como un caso no ISO y devuelve una fecha invalida.
+  const fechaLocal = new Date(Number(anio), Number(mes) - 1, Number(dia))
+  const diaDeSemana = diasDeSemana[fechaLocal.getDay()] ?? ''
+  const nombreDeMes = meses[Number(mes) - 1] ?? mes
+
+  return `${diaDeSemana} ${Number(dia)} de ${nombreDeMes} de ${anio}`
 }

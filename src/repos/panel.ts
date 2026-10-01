@@ -22,17 +22,40 @@ export interface CuentaPanel {
   tipo: 'corriente' | 'ahorro' | 'efectivo' | 'credito'
   saldo: Dinero
   archivada: boolean
+  /**
+   * Lo que puso al abrir la cuenta. El saldo de la pantalla es `saldo`; este es el origen del
+   * derivado, y la pagina lo necesita para el formulario de "corregir saldo inicial". Va en la
+   * misma consulta que `saldo` a proposito: pedirlo aparte seria una segunda vuelta por
+   * primary key para leer una columna que ya estaba a mano.
+   */
+  saldo_inicial: Dinero
+  /** El orden con que el usuario la Arrangeo. Es lo que edita el formulario de posicion. */
+  orden: number
+  /**
+   * Si tiene movimientos. El repositorio rechaza cambiar el tipo de una cuenta que ya los
+   * tiene, y la vista lo dice **antes** de ofrecer el formulario en vez de dejar que el error
+   * aparezca despues de enviarlo.
+   */
+  tieneMovimientos: boolean
 }
 
 export interface SobrePanel {
   id: number
   nombre: string
   grupo_id: number
+  orden: number
   disponible: Dinero
   archivado: boolean
   es_negativo: boolean
   desborde?: Dinero
   meta?: ProgresoMeta
+  /**
+   * Si se puede borrar, o si hay que archivarlo. `repos/sobres.ts` tira `SobreConMovimientos`
+   * cuando el sobre ya no es vacio, asi que la fila avisa en vez de ofrecer un boton que va a
+   * fallar. Con un grupo de sobres, la mayoria ya tiene movimientos: es el caso normal, no la
+   * excepcion.
+   */
+  eliminable: boolean
 }
 
 export interface GrupoPanel {
@@ -155,12 +178,24 @@ export async function consultarDatosPanel(
   const centimosDineroSuelto = aCentimos(resumen.dinero_suelto)
 
   // 2. Cuentas vivas y archivadas con su saldo al corte del periodo
+  /*
+   * El `exists` de `tiene_movimientos` va en la misma consulta que el saldo, no en una segunda.
+   *
+   * Antes esta pagina (la de `/cartera/<id>`) llamaba `tieneMovimientos` por cuenta desde el
+   * servidor: con cinco cuentas eran cinco viajes extra a la primary key. Un `exists` correlado
+   * dentro del mismo `select` devuelve el booleano sin salir de la fila, y el indice de
+   * `movimientos.cuenta_id` lo resuelve. No es una suma de importes, asi que no roza la regla
+   * del dinero: es un `bool`.
+   */
   const filasCuentas = await filas<{
     id: number
     nombre: string
     tipo: 'corriente' | 'ahorro' | 'efectivo' | 'credito'
     saldo: Dinero
     archivada: boolean
+    saldo_inicial: Dinero
+    orden: number
+    tieneMovimientos: boolean
   }>(
     db,
     sql`
@@ -169,6 +204,12 @@ export async function consultarDatosPanel(
         c.nombre,
         c.tipo,
         c.archivada,
+        c.saldo_inicial,
+        c.orden,
+        exists (
+          select 1 from movimientos m
+          where m.cuenta_id = c.id and m.eliminado_en is null
+        ) as "tieneMovimientos",
         (${saldoDeCuenta('c', periodo)}) as saldo
       from cuentas c
       where c.cartera_id = ${cartera_id}
@@ -179,14 +220,12 @@ export async function consultarDatosPanel(
 
   const cuentasActivas: CuentaPanel[] = []
   const cuentasArchivadas: CuentaPanel[] = []
-  let totalCuentasActivasCentimos = 0n
 
   for (const c of filasCuentas) {
     if (c.archivada) {
       cuentasArchivadas.push(c)
     } else {
       cuentasActivas.push(c)
-      totalCuentasActivasCentimos += aCentimos(c.saldo)
     }
   }
 
@@ -214,12 +253,26 @@ export async function consultarDatosPanel(
     `,
   )
 
+  /*
+   * Los sobres con su disponible, su `orden` y si se pueden borrar.
+   *
+   * `eliminable` sale de la misma consulta y no la calcula la vista, porque la regla es del
+   * dominio: `repos/sobres.ts` borra solo si el sobre esta vacio y sin movimientos, y tira
+   * `SobreConSaldo` o `SobreConMovimientos` si no. Preguntar "¿puedo borrarlo?" a la fila que
+   * va a decidir es una vuelta al servidor por cada sobre.
+   *
+   * El `disponible_de_otros` es un `exists`: ¿este sobre tiene saldo o movimientos propios?
+   * No mira el de los demas, asi que un sobre con asignaciones pero sin uso **si** se puede
+   * borrar, que es lo que el repositorio hace.
+   */
   const filasSobres = await filas<{
     id: number
     nombre: string
     grupo_id: number
+    orden: number
     disponible: Dinero
     archivado: boolean
+    eliminable: boolean
   }>(
     db,
     sql`
@@ -227,8 +280,16 @@ export async function consultarDatosPanel(
         s.id,
         s.nombre,
         s.grupo_id,
+        s.orden,
         (${disponibleDeSobre('s', periodo)}) as disponible,
-        s.archivado
+        s.archivado,
+        (
+          ${disponibleDeSobre('s', periodo)} = 0
+          and not exists (
+            select 1 from movimientos m
+            where m.sobre_id = s.id and m.eliminado_en is null
+          )
+        ) as eliminable
       from sobres s
       where s.cartera_id = ${cartera_id}
         and s.eliminado_en is null
@@ -306,11 +367,13 @@ export async function consultarDatosPanel(
       id: s.id,
       nombre: s.nombre,
       grupo_id: s.grupo_id,
+      orden: s.orden,
       disponible: s.disponible,
       archivado: s.archivado,
       es_negativo: neg,
       desborde,
       meta: metaProgreso,
+      eliminable: s.eliminable,
     }
 
     if (neg) {
@@ -331,6 +394,28 @@ export async function consultarDatosPanel(
     }
   }
 
+  /*
+   * El total de cada grupo, en una consulta para todos.
+   *
+   * Antes esto era un `select ... sum(...)` **dentro** del bucle de grupos: con dos grupos
+   * eran dos viajes, y con veinte —que es una cartera con departamentos— veinte. El total es
+   * la suma de los disponibles, asi que la suma es de la base; agruparla por `grupo_id` y leer
+   * el resultado de un `Map` es la misma cuenta con una sola consulta.
+   */
+  const filasTotalesGrupo = await filas<{ grupo_id: number; total: Dinero }>(
+    db,
+    sql`
+      select
+        s.grupo_id,
+        coalesce(sum(${disponibleDeSobre('s', periodo)}), 0)::numeric(16,2) as total
+      from sobres s
+      where s.cartera_id = ${cartera_id}
+        and s.eliminado_en is null
+      group by s.grupo_id
+    `,
+  )
+  const totalDeGrupo = new Map(filasTotalesGrupo.map((f) => [f.grupo_id, f.total]))
+
   // Grupos con sobres (sobres activos agrupados, desbordes ordenados primero dentro de cada grupo)
   const gruposPanel: GrupoPanel[] = []
   for (const g of filasGrupos) {
@@ -342,11 +427,13 @@ export async function consultarDatosPanel(
           id: s.id,
           nombre: s.nombre,
           grupo_id: s.grupo_id,
+          orden: s.orden,
           disponible: s.disponible,
           archivado: s.archivado,
           es_negativo: neg,
           desborde: neg ? absDinero(s.disponible) : undefined,
           meta: metasMap.get(s.id),
+          eliminable: s.eliminable,
         }
       })
 
@@ -357,21 +444,11 @@ export async function consultarDatosPanel(
       return 0
     })
 
-    const [totalGrupoFila] = await filas<{ total: Dinero }>(
-      db,
-      sql`
-        select coalesce(sum(${disponibleDeSobre('s', periodo)}), 0)::numeric(16,2) as total
-        from sobres s
-        where s.grupo_id = ${g.id}
-          and s.eliminado_en is null
-      `,
-    )
-
     gruposPanel.push({
       id: g.id,
       nombre: g.nombre,
       orden: g.orden,
-      total_disponible: totalGrupoFila?.total ?? '0.00',
+      total_disponible: totalDeGrupo.get(g.id) ?? '0.00',
       sobres: sobresDeGrupo,
     })
   }

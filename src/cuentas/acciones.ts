@@ -85,7 +85,7 @@ export async function accionCrearCuenta(
     return aResultado(error)
   }
 
-  revalidatePath(`/cartera/${cartera_id}`)
+  revalidatePath('/panel')
   return { ok: true, aviso: `La cuenta "${nombre}" quedo creada.` }
 }
 
@@ -105,7 +105,7 @@ export async function accionRenombrarCuenta(
     return aResultado(error)
   }
 
-  revalidatePath(`/cartera/${cartera_id}`)
+  revalidatePath('/panel')
   return { ok: true, aviso: 'El nombre cambio. El saldo y el historial quedaron intactos.' }
 }
 
@@ -128,7 +128,7 @@ export async function accionReordenarCuenta(
     return aResultado(error)
   }
 
-  revalidatePath(`/cartera/${cartera_id}`)
+  revalidatePath('/panel')
   return { ok: true, aviso: 'El orden cambio.' }
 }
 
@@ -154,7 +154,7 @@ export async function accionCambiarTipoCuenta(
     return aResultado(error)
   }
 
-  revalidatePath(`/cartera/${cartera_id}`)
+  revalidatePath('/panel')
   return { ok: true, aviso: 'El tipo cambio.' }
 }
 
@@ -176,7 +176,7 @@ export async function accionCorregirSaldoInicial(
     return aResultado(error)
   }
 
-  revalidatePath(`/cartera/${cartera_id}`)
+  revalidatePath('/panel')
   return { ok: true, aviso: 'El saldo inicial quedo corregido y el saldo se recalculo.' }
 }
 
@@ -195,7 +195,7 @@ export async function accionArchivarCuenta(
     return aResultado(error)
   }
 
-  revalidatePath(`/cartera/${cartera_id}`)
+  revalidatePath('/panel')
   return { ok: true, aviso: 'La cuenta quedo archivada. Su historial sigue aqui.' }
 }
 
@@ -214,6 +214,6 @@ export async function accionRestaurarCuenta(
     return aResultado(error)
   }
 
-  revalidatePath(`/cartera/${cartera_id}`)
+  revalidatePath('/panel')
   return { ok: true, aviso: 'La cuenta volvio a estar activa.' }
 }

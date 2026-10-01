@@ -24,7 +24,7 @@ function periodoAnterior(periodo: string): string {
 export default async function PaginaComparativos({
 	searchParams,
 }: {
-	searchParams?: Promise<{ cartera?: string; mes?: string; referencia?: string }>
+	searchParams?: Promise<{ cartera?: string; mes?: string; referencia?: string; recalculado?: string }>
 }) {
 	const sesion = await sesionActual()
 	if (!sesion) redirect('/entrar')
@@ -54,9 +54,22 @@ export default async function PaginaComparativos({
         <div className={tema.grano} aria-hidden="true" />
 
 			<div className={producto.contenido}>
+				{/*
+					R3 pide que el sistema avise que la comparacion cambio. El aviso va **aca** y
+					no en la pantalla de edicion, porque la pagina que cambia es esta: los totales
+					que se movieron son los que se estan mirando.
+
+					Llega por la URL y no por un estado guardado: `recalculado=1` lo pone el enlace
+					"Ver la comparacion recalculada" que aparece junto al aviso retroactivo de R7,
+					despues de una alta, una edicion o un borrado. No hay tabla nueva ni historial:
+					el aviso describe el acto recien hecho, no un estado permanente. Y cambiar el
+					periodo o la cartera descarta la bandera por el solo hecho de reconstruir el
+					query string, que es lo correcto — es otra comparacion, con otros numeros.
+				*/}
 				<VistaComparativos
 					datos={datos}
 					carterasDisponibles={activas.map(({ id, nombre, moneda }) => ({ id, nombre, moneda }))}
+					avisoRecalculo={params.recalculado === '1'}
 				/>
 			</div>
 		</main>
