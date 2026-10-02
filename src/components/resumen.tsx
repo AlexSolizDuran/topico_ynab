@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { esCero, esNegativo, formatear } from '../dinero'
+import { absDinero, esCero, esNegativo, formatear } from '../dinero'
 import { aCentimos, deCentimos } from '../patrimonio/calculos'
 import type {
   CarteraResumen,
@@ -105,7 +105,7 @@ function GrupoVista({ grupo, periodo }: { grupo: GrupoMoneda; periodo: string })
           />
           <Cifra
             etiqueta="Gastos del mes"
-            valor={`-${formatear(grupo.flujo.gastado, moneda)}`}
+            valor={`-${formatear(absDinero(grupo.flujo.gastado), moneda)}`}
             tono="gasto"
           />
           <Cifra etiqueta="Neto del mes" valor={formatear(grupo.flujo.neto, moneda)} tono={tonoNeto} />

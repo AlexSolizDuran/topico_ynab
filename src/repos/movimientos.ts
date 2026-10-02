@@ -807,10 +807,10 @@ export async function quitarSobre(
  * Los cambios de una edicion. Todos opcionales: el formulario manda el movimiento entero,
  * pero un cambio de uno en uno es el caso normal y no obliga a tocar lo demas.
  *
- * **`tipo` no esta en la lista, y no es un olvido.** Es la razon de que `monto` se
- * normalice contra el tipo **de la fila** y no contra el signo de lo que llega: corregir un
- * gasto de `-450` a `380` es un gasto de `-380`, no un ingreso de `380`. Si el tipo fuera
- * editable, editar el importe seria tambien editar el tipo, y R5 no lo pide.
+ * **`tipo` no viaja como campo separado.** En un movimiento normal se deriva del signo del
+ * importe que escribe la persona: negativo es gasto y positivo es ingreso. Asi el mismo
+ * formulario permite corregir un gasto a ingreso o un ingreso a gasto sin que el tipo viejo
+ * congele el signo.
  */
 export interface DatosEdicion {
   cuenta_id?: number
@@ -874,10 +874,18 @@ export async function editarMovimiento(
       cambios.sobre_id === undefined ? fila.sobre_id : cambios.sobre_id
     await exigirSobreDeMismaCartera(conexion, usuario_id, cuentaEfectiva, sobreEfectivo)
 
+    const importeEditado = cambios.monto === undefined ? undefined : comoImporte(cambios.monto)
+    const tipoEditado: TipoDeMovimiento | undefined = importeEditado === undefined
+      ? undefined
+      : esNegativo(importeEditado)
+        ? 'gasto'
+        : 'ingreso'
+
     const valores = {
       ...(cambios.cuenta_id === undefined ? {} : { cuenta_id: cambios.cuenta_id }),
       ...(cambios.sobre_id === undefined ? {} : { sobre_id: cambios.sobre_id }),
-      ...(cambios.monto === undefined ? {} : { monto: montoConSigno(cambios.monto, fila.tipo) }),
+      ...(importeEditado === undefined ? {} : { monto: montoConSigno(importeEditado, tipoEditado!) }),
+      ...(tipoEditado === undefined ? {} : { tipo: tipoEditado }),
       ...(cambios.fecha === undefined ? {} : { fecha: sql`${cambios.fecha}::date` }),
       ...(cambios.descripcion === undefined ? {} : { descripcion: cambios.descripcion }),
       ...(cambios.comercio === undefined ? {} : { comercio: comercioNormalizado(cambios.comercio) }),

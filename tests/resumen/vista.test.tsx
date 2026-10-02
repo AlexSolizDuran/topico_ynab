@@ -67,4 +67,17 @@ describe('130: vista de resumen global', () => {
     expect(html).toContain('action="/resumen"')
     expect(html).toContain('method="get"')
   })
+
+  it('muestra un gasto negativo con un solo signo menos', () => {
+    const html = renderToStaticMarkup(
+      <VistaResumen
+        datos={{
+          ...datos,
+          grupos: [{ ...datos.grupos[0]!, flujo: { ...datos.grupos[0]!.flujo, gastado: '-15000.00' } }],
+        }}
+      />
+    )
+
+    expect(html).not.toContain('--')
+  })
 })

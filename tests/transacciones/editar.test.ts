@@ -106,16 +106,24 @@ describe('060: corregir el importe', () => {
     expect(await saldo(cuenta)).toBe('550.00')
     expect(await disponible()).toBe('2550.00')
 
-    const corregido = await editarMovimiento(base.db, usuario, movimiento, { monto: '380' })
+    const corregido = await editarMovimiento(base.db, usuario, movimiento, { monto: '-380' })
 
-    // El importe guardado es **negativo**: escribir `380` en un gasto deja un gasto. El
-    // `tipo` no es editable, asi que el signo sale del tipo que ya tenia la fila.
+    // El importe guardado conserva el signo escrito: el negativo mantiene el movimiento como gasto.
     expect(corregido.monto).toBe('-380.00')
     expect(corregido.tipo).toBe('gasto')
     // El saldo subio 70, de 550 a 620.
     expect(await saldo(cuenta)).toBe('620.00')
     // Y el disponible del sobre tambien, porque el sobre quedo con 70 menos gastados.
     expect(await disponible()).toBe('2620.00')
+  })
+
+  it('cambiar el signo cambia el tipo del movimiento', async () => {
+    const movimiento = await gastoDe450()
+
+    const corregido = await editarMovimiento(base.db, usuario, movimiento, { monto: '380' })
+
+    expect(corregido.monto).toBe('380.00')
+    expect(corregido.tipo).toBe('ingreso')
   })
 
   it('corregir un ingreso lo deja positivo', async () => {

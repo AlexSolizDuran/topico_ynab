@@ -26,7 +26,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className={`${fuenteCifra.variable} ${fuenteTexto.variable}`}>
+    <html
+      lang="es"
+      className={`${fuenteCifra.variable} ${fuenteTexto.variable}`}
+      suppressHydrationWarning
+    >
       <body className="min-h-screen bg-lienzo text-texto antialiased">
         {/*
           El tema elegido se aplica antes del primer pintado para que no haya un destello del
